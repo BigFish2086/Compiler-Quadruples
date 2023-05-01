@@ -102,13 +102,18 @@ declaration:
   ;
 
 expr:
-  // TODO: add other rules for enums and function invokations
     IDENTIFIER
   | INTEGER
   | FLOAT
   | BOOL
   | STRING
   | expr_in_parenthsis
+
+  // enums
+  | IDENTIFIER '.' IDENTIFIER
+
+  // to be able to do something like `print adder(1, 2.2);`
+  | function_invokation
 
   // arithmetic operations
   | MINUS expr %prec UMINUS
@@ -162,22 +167,21 @@ argument_list:
 
 if_stmt:
     if_part
-  | if_part ELSE
+  | if_part /*{}*/ ELSE code_block /*{}*/
   ;
 
 if_part:
-    IF expr_in_parenthsis
+    IF expr_in_parenthsis /*{}*/ code_block /*{}*/
   ;
 
 while_stmt:
-    WHILE
+    WHILE /*{}*/ expr_in_parenthsis /*{}*/ code_block /*{}*/
   ;
 
 for_stmt:
     // Note: We are creating a new scope here for the (optional) loop variable
     // so it doesn't conflict with variables from the parent scope.
-    FOR
-    code_block
+    FOR /*{}*/ '(' optional_declaration /*{}*/ ';' expr /*{}*/ ';' optional_assignment ')' /*{}*/ code_block /*{}*/
   ;
 
 optional_declaration:
@@ -191,7 +195,7 @@ optional_assignment:
   ;
 
 switch_stmt:
-    // Note: A switch statement has to have atleast one CASE branch.
+    // Note: A switch statement has to have at least one CASE branch.
     SWITCH expr_in_parenthsis
     '{' switch_branches switch_default_branch '}'
   ;
@@ -202,7 +206,7 @@ switch_branches:
   ;
 
 switch_case_branch:
-    CASE
+    CASE /*{}*/ expr /*{}*/ ':' code_block /*{}*/
   ;
 
 switch_default_branch:
