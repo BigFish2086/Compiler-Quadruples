@@ -218,6 +218,7 @@ switch_default_branch:
 
 int main(int argc, char** argv) {
 
+   yyin = fopen(argv[1], "r");
    #if defined(YYDEBUG) && (YYDEBUG==1)
        yydebug = 1;
    #endif
