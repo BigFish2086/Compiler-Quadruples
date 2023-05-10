@@ -77,6 +77,40 @@ struct divider {
   }
 };
 
+// note: equal can work for == and !=
+struct equlizer {
+  template <typename T, typename U,
+            enable_if_t<is_arithmetic_v<T> && is_arithmetic_v<U>>>
+  bool operator()(const T &a, const U &b) const {
+    return a == b;
+  }
+
+  bool operator()(const std::string &a, const std::string &b) const {
+    return a == b;
+  }
+
+  bool operator()(auto a, auto b) const {
+    throw std::runtime_error("invalid types for equal");
+  }
+};
+
+// note: can work for <, >, <=, >=
+struct less_than {
+  template <typename T, typename U,
+            enable_if_t<is_arithmetic_v<T> && is_arithmetic_v<U>>>
+  bool operator()(const T &a, const U &b) const {
+    return a < b;
+  }
+
+  bool operator()(const std::string &a, const std::string &b) const {
+    return a < b;
+  }
+
+  bool operator()(auto a, auto b) const {
+    throw std::runtime_error("invalid types for less than");
+  }
+};
+
 struct Expr {
   Value value;
   bool isConst;
@@ -105,5 +139,16 @@ struct Expr {
                 this->constResult(other));
   }
 
+  // overload comparison operators
+  bool operator==(const Expr &other) const {
+    return std::visit(equlizer(), value, other.value);
+  }
+  bool operator!=(const Expr &other) const { return !(*this == other); }
+  bool operator<(const Expr &other) const {
+    return std::visit(less_than(), value, other.value);
+  }
+  bool operator>(const Expr &other) const { return other < *this; }
+  bool operator<=(const Expr &other) const { return !(*this > other); }
+  bool operator>=(const Expr &other) const { return !(*this < other); }
 
 };
