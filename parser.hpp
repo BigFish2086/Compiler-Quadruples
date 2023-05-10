@@ -111,6 +111,28 @@ struct less_than {
   }
 };
 
+struct log_and {
+  bool operator()(const bool &a, const bool &b) const { return a && b; }
+  bool operator()(const int &a, const int &b) const { return a && b; }
+
+  bool operator()(auto a, auto b) const {
+    throw std::runtime_error("invalid types for logical and");
+  }
+};
+
+struct log_not {
+  bool operator()(const bool &a) const { return !a; }
+  bool operator()(const int &a) const { return !a; }
+
+  bool operator()(auto a) const {
+    throw std::runtime_error("invalid types for logical not");
+  }
+};
+
+struct printer {
+  template <typename T> void operator()(const T &t) const { cout << t; }
+};
+
 struct Expr {
   Value value;
   bool isConst;
@@ -151,4 +173,17 @@ struct Expr {
   bool operator<=(const Expr &other) const { return !(*this > other); }
   bool operator>=(const Expr &other) const { return !(*this < other); }
 
+  // overload logical operators
+  bool operator!() const { return std::visit(log_not(), value); }
+  bool operator&&(const Expr &other) const {
+    return std::visit(log_and(), value, other.value);
+  }
+  bool operator||(const Expr &other) const { return !(!(*this) && !other); }
+
+  // overload stream operator
+  friend ostream &operator<<(ostream &os, const Expr &expr) {
+    std::visit(printer(), expr.value);
+    return os;
+  }
 };
+
