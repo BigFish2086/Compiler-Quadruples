@@ -187,3 +187,81 @@ struct Expr {
   }
 };
 
+class ID {
+public:
+  string name;
+  int line;
+  int scope;
+
+  ID(string _name) {
+    this->name = _name;
+    this->line = yylineno;
+    this->scope = current_scope;
+  }
+  ~ID() {}
+};
+
+class VarID : public ID {
+public:
+  yytokentype type;
+  Value value;
+  bool isVar = false;
+  bool isUsed = false;
+  bool isConst = false;
+  bool isInitialized = false;
+
+  VarID(yytokentype _type, string _name, bool _isConst)
+      : ID(_name) {
+    this->type = _type;
+    this->isConst = _isConst;
+  }
+  ~VarID() {}
+
+  void setVal(Value _val) {
+    this->value = _val;
+    this->isInitialized = true;
+  }
+  
+  Value getVal() {
+    if (!this->isInitialized) {
+      throw std::runtime_error("variable " + this->name + " is not initialized");
+    }
+    return this->value;
+  }
+
+};
+
+class FuncID : public ID {
+public:
+  yytokentype type;
+  vector<yytokentype> funcParamsTypes;
+
+  FuncID(yytokentype _type, string _name, vector<yytokentype> _paramsTypes)
+      : ID(_name) {
+    this->type = _type;
+    this->funcParamsTypes = _paramsTypes;
+  }
+  ~FuncID() {}
+};
+
+class EnumID : public ID {
+public:
+  vector<string> enumVariants;
+
+  EnumID(string _name, vector<string> _variants) : ID(_name) {
+    this->enumVariants = _variants;
+  }
+  ~EnumID() {}
+};
+
+class EnumVariantID : public ID {
+public:
+  string enumName;
+
+  EnumVariantID(string _name, string _enumName) : ID(_name) {
+    this->enumName = _enumName;
+  }
+  ~EnumVariantID() {}
+};
+
+
