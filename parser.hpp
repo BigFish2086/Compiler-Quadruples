@@ -1,11 +1,12 @@
+#include <algorithm>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <stdexcept>
 #include <string>
 #include <variant>
 #include <vector>
-#include <stdexcept>
 
 #include "y.tab.h"
 using namespace std;
@@ -23,12 +24,40 @@ string fout;
 ofstream symlog;
 ofstream output;
 
-// related to Value type
-// TODO:
+// ----------------------------------------------------------------------
+// Global TODO:
 // - add more type conversions
 // - also print the appropriate quadruples when converting types
-// - handle the error better
+// - handle the error better i.e change all those throw runtime_error
+// - handle the assignment of enum types
 
+// type `key` can be treated as any of its `values`
+map<int, vector<int>> typeCast = {{INTEGER, {INTEGER, FLOAT, BOOL}},
+                                  {FLOAT, {INTEGER, FLOAT, BOOL}},
+                                  {STRING, {STRING}},
+                                  {BOOL, {INTEGER, FLOAT, BOOL}}};
+
+map<int, string> type2Str = {
+    {INTEGER, "INTEGER"}, {FLOAT, "FLOAT"}, {STRING, "STRING"}, {BOOL, "BOOL"}};
+
+bool canCast(const int &from, const int &to) {
+  if (from == to) {
+    return true;
+  }
+  auto it = typeCast.find(from);
+  if (it == typeCast.end()) {
+    return false;
+  }
+  auto it2 = std::find(it->second.begin(), it->second.end(), to);
+  return it2 != it->second.end();
+}
+
+// TODO:
+// - to do the actual type conversion
+// - to print the appropriate quadruples when converting types
+void doCast(const int &from, const int &to){};
+
+// ----------------------------------------------------------------------
 struct adder {
   Value operator()(const int &a, const int &b) const { return a + b; }
   Value operator()(const int &a, const float &b) const { return a + b; }
@@ -77,6 +106,7 @@ struct divider {
   }
 };
 
+// ----------------------------------------------------------------------
 // note: equal can work for == and !=
 struct equlizer {
   template <typename T, typename U,
@@ -111,6 +141,7 @@ struct less_than {
   }
 };
 
+// ----------------------------------------------------------------------
 struct log_and {
   bool operator()(const bool &a, const bool &b) const { return a && b; }
   bool operator()(const int &a, const int &b) const { return a && b; }
@@ -129,16 +160,40 @@ struct log_not {
   }
 };
 
+// ----------------------------------------------------------------------
+struct type_op {
+  int operator()(const int &a) const { return INTEGER; }
+  int operator()(const float &a) const { return FLOAT; }
+  int operator()(const std::string &a) const { return STRING; }
+  int operator()(const bool &a) const { return BOOL; }
+
+  int operator()(auto a) const {
+    throw std::runtime_error("not supported type");
+  }
+};
+
 struct printer {
   template <typename T> void operator()(const T &t) const { cout << t; }
 };
 
+// ----------------------------------------------------------------------
 struct Expr {
   Value value;
   bool isConst;
+  Expr() : value(0), isConst(false) {}
   Expr(Value v) : value(v), isConst(false) {}
   Expr(Value v, bool ct) : value(v), isConst(ct) {}
   bool constResult(const Expr &other) const { return isConst && other.isConst; }
+
+  // overload type operator
+  int type() const { return std::visit(type_op(), value); }
+
+  // overload assignment operator
+  Expr &operator=(const Expr &other) {
+    value = other.value;
+    isConst = other.isConst;
+    return *this;
+  }
 
   // overload arithmatic operators
   Expr operator-() const {
