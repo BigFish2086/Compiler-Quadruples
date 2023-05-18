@@ -1,6 +1,7 @@
 %{
   #include <iostream>
   #include <string>
+  #include "parser.hpp"
   using namespace std;
 
   extern int yylex();
@@ -9,27 +10,17 @@
   extern FILE* yyin;
 %}
 
-%union {
-  int ival;
-  float fval;
-  bool bval;
-  char* sval;
-
-  char* id;
-}
-%token <ival> INTEGER
-%token <fval> FLOAT
-%token <bval> BOOL
-%token <sval> STRING
-%token <id> IDENTIFIER
+%define api.value.type union
+%token <int> INTEGER
+%token <float> FLOAT
+%token <bool> BOOL
+%token <char *> STRING
+%token <char *> IDENTIFIER
 
 %type <yytokentype> type
-
-// for function declaration and invokation
-// TODO: may add types to these tokens
-%type expr expr_in_parenthsis function_invokation
-%type typed_parameter_list argument_list
-%type parameter_list
+%type <struct Expr*> expr expr_in_parenthsis function_invokation
+%type <struct TypedList*> typed_parameter_list argument_list
+%type <struct StrList*> enum_variants
 
 %token ERROR PRINT RETURN 
 %token WHILE FOR
@@ -53,10 +44,10 @@
 %%
 
 type:
-    INT_TYPE        // { $$ = INTEGER; }
-  | FLOAT_TYPE      // { $$ = FLOAT; }
-  | BOOL_TYPE       // { $$ = BOOL; }
-  | STRING_TYPE     // { $$ = STRING; }
+    INT_TYPE        { $$ = INTEGER; }
+  | FLOAT_TYPE      { $$ = FLOAT; }
+  | BOOL_TYPE       { $$ = BOOL; }
+  | STRING_TYPE     { $$ = STRING; }
   ;
 
 program: 

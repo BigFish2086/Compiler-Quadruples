@@ -1,5 +1,5 @@
 %{
-  #include "y.tab.h"
+  #include "parser.tab.h"
   int line_num = 1;
 %}
 %option yylineno
@@ -49,33 +49,33 @@
 \/\/[^\n]* ;
 
 \"[^"\n]*\" {
-  yylval.sval = strdup(yytext + 1);
-  yylval.sval[yyleng - 2] = 0;
+  yylval.STRING = strdup(yytext + 1);
+  yylval.STRING[yyleng - 2] = 0;
   return STRING;
 }
 
 true {
-  yylval.bval = true;
+  yylval.BOOL = true;
   return BOOL;
 }
 
 false {
-  yylval.bval = false;
+  yylval.BOOL = false;
   return BOOL;
 }
 
 [0-9]+ {
-  yylval.ival = atoi(yytext);
+  yylval.INTEGER = atoi(yytext);
   return INTEGER;
 }
 
 [0-9]*\.[0-9]+ {
-  yylval.fval = atof(yytext);
+  yylval.FLOAT = atof(yytext);
   return FLOAT;
 }
 
 [_a-zA-Z][_a-zA-Z0-9]* {
-  yylval.id = strdup(yytext);
+  yylval.IDENTIFIER = strdup(yytext);
   return IDENTIFIER;
 }
 
