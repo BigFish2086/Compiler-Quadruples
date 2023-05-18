@@ -51,11 +51,11 @@ type:
   ;
 
 program: 
-  stmts
+  stmts { exitScope(); }
   ;
 
 stmts:
-  | stmts stmt
+  | stmts stmt  //  { symtable log }
   ;
 
 stmt:
@@ -63,7 +63,7 @@ stmt:
   | assignment ';'
   | declaration ';'
   | function_declaration
-  | expr ';'
+  | expr ';'  { pop(); }
   | RETURN expr ';'
   | PRINT expr ';'
   | if_stmt
@@ -75,85 +75,103 @@ stmt:
   ;
 
 code_block:
-   '{' stmts '}'
+   '{' { enterScope(); } stmts '}' { exitScope(); }
   ;
 
 assignment:
-  IDENTIFIER '=' expr
+  IDENTIFIER '=' expr { getID<VarID>($1)->setExpr($3); }
   ;
 
 declaration:
-    type IDENTIFIER
-  | type IDENTIFIER '=' expr
+    type IDENTIFIER { declareID(new VarID($1, $2)); }
+  | type IDENTIFIER '=' expr 
+    { 
+      VarID* id = new VarID($1, $2, true);
+      declareID(id);
+      id->setExpr($4);
+    }
   | CONST_TYPE type IDENTIFIER '=' expr
+    { 
+      VarID* id = new VarID($2, $3, $5);
+      declareID(id);
+      popv(id->name, id->scope);
+    }
   // for enums
-  | ENUM_TYPE IDENTIFIER '{' parameter_list '}'
+  | ENUM_TYPE IDENTIFIER '{' enum_variants '}'
   | IDENTIFIER IDENTIFIER
   | IDENTIFIER IDENTIFIER '=' expr
   ;
 
 expr:
-    IDENTIFIER
-  | INTEGER
-  | FLOAT
-  | BOOL
-  | STRING
-  | expr_in_parenthsis
+    IDENTIFIER                { VarID *id = getID<VarID>($1); $$ = id->getExpr(); pushv($1, id->scope); }
+  | INTEGER                   { $$ = new Expr(Value($1), true); push($1); }
+  | FLOAT                     { $$ = new Expr(Value($1), true); push($1); }
+  | BOOL                      { $$ = new Expr(Value($1), true); push($1); }
+  | STRING                    { $$ = new Expr(Value($1), true); pushs($1); }
+  | expr_in_parenthsis        { $$ = $1; }
 
   // enums
   | IDENTIFIER '.' IDENTIFIER
 
   // to be able to do something like `print adder(1, 2.2);`
-  | function_invokation
+  | function_invokation       { $$ = $1; }
 
   // arithmetic operations
-  | MINUS expr %prec UMINUS
-  | expr PLUS expr
-  | expr MINUS expr
-  | expr MULT expr
-  | expr DIV expr
+  | MINUS expr %prec UMINUS   { $$ = -(*$2); neg(); }
+  | expr PLUS expr            { $$ = *$1+$3; add(); }
+  | expr MINUS expr           { $$ = *$1-$3; sub(); }
+  | expr MULT expr            { $$ = *$1*$3; mult(); }
+  | expr DIV expr             { $$ = *$1/$3; div(); }
 
   // comparison operations
-  | expr LT expr
-  | expr GT expr
-  | expr LE expr
-  | expr GE expr
-  | expr EQ expr
-  | expr NE expr
+  | expr LT expr              { $$ = new Expr(Value(*$1<$3), true); lt(); }
+  | expr GT expr              { $$ = new Expr(Value(*$1>$3), true); gt(); }
+  | expr LE expr              { $$ = new Expr(Value(*$1<=$3), true); le(); }
+  | expr GE expr              { $$ = new Expr(Value(*$1>=$3), true); ge(); }
+  | expr EQ expr              { $$ = new Expr(Value(*$1==$3), true); eq(); }
+  | expr NE expr              { $$ = new Expr(Value(*$1!=$3), true); ne(); }
 
-  // logical operations
-  | expr AND expr
-  | expr OR expr
-  | NOT expr
+  // logical operations - TODO: solve the resultant error
+  // | expr AND expr             { $$ = new Expr(Value(*$1&&$3), true); and(); }
+  // | expr OR expr              { $$ = new Expr(Value(*$1||$3), true); or(); }
+  // | NOT expr                  { $$ = new Expr(Value(!(*$2)), true); not(); }
   ;
 
 expr_in_parenthsis:
-    '(' expr ')'
+    '(' expr ')'    { $$ = $2; }
+  ;
+
+enum_variants:
+    enum_variants ',' IDENTIFIER     { $$ = $1->append($3); }
+  | IDENTIFIER                       { $$ = new StrList($1); }
   ;
 
 function_declaration:
-  type IDENTIFIER '(' typed_parameter_list ')' code_block
-  ;
-
-parameter_list:
-    parameter_list ',' IDENTIFIER
-  | IDENTIFIER
+  type IDENTIFIER { enterFunc($1); } '(' typed_parameter_list ')' code_block { exitFunc(); declareID(new FuncID($1, $2, $5)); funcHasReturnStatment($2);  }
   ;
 
 typed_parameter_list:
     typed_parameter_list ',' type IDENTIFIER
+    { 
+      $$ = $1->append($3);
+      declareID(new VarID($3, $4, true));
+    }
   | type IDENTIFIER
-  |
+    { 
+      $$ = new TypedList($1); 
+      declareID(new VarID($1, $2, true)); 
+    }
+  | { $$ = new TypedList(); }
   ;
 
 function_invokation:
-    IDENTIFIER '(' argument_list ')'
+    IDENTIFIER '(' argument_list ')' { $$ = callingFunc($1, $3); }
   ;
 
 argument_list:
-    argument_list ',' expr
-  | expr
-  |
+    argument_list ',' expr  { $$ = $1->append($3->type()); }
+  | expr                    { $$ = new TypedList($1->type()); }
+  |                         { $$ = new TypedList(); }
   ;
 
 if_stmt:
@@ -213,7 +231,17 @@ int main(int argc, char** argv) {
    #if defined(YYDEBUG) && (YYDEBUG==1)
        yydebug = 1;
    #endif
-  yyparse();
+
+  fout = argv[1];
+  output.open(fout + ".q");
+  output << fixed << setprecision(5);
+
+  // Handle syntax errors.
+  if (yyparse()) log_syntax;
+  if (syntax_errors) {
+    cerr << "Found " << syntax_errors <<" syntax error(s)" <<endl;
+    abort();
+  }
 
   return 0;
 }
