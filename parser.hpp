@@ -440,12 +440,36 @@ void enterFunc(yytokentype type) {
   enterScope();
 }
 
-void checkFuncReturnType(Expr *expr) {
+void funcHasReturnStatment(const string &funcName) {
+  auto [type, isReturned] = funcReturnTypesStack.back();
+  if (isReturned) {
+    throw std::runtime_error("function " + funcName +
+                             " has more than one return statement");
+  }
+  // TODO: add another return for safty measures
+}
+
+void validFuncReturnType(Expr *expr) {
   yytokentype returnType = funcReturnTypesStack.back().first;
   if (returnType != expr->type()) {
     throw std::runtime_error("function return type mismatch");
   }
   funcReturnTypesStack.back().second = true;
+}
+
+Expr *callingFunc(const string &name, const struct TypedList *paramsTypes) {
+  FuncID *funcID = getID<FuncID>(name);
+  if (funcID->funcParamsTypes.size() != paramsTypes->list.size()) {
+    throw std::runtime_error("function " + name +
+                             " called with wrong number of arguments");
+  }
+  for (int i = 0; i < funcID->funcParamsTypes.size(); i++) {
+    if (funcID->funcParamsTypes[i] != paramsTypes->list[i]) {
+      throw std::runtime_error("function " + name +
+                               " called with wrong argument type");
+    }
+  }
+  return new Expr(funcID->type);
 }
 
 void exitFunc() {
@@ -455,15 +479,13 @@ void exitFunc() {
     throw std::runtime_error("function does not return any value");
   }
   // TODO: print the needed quads to simulate the return type
-  exitScope();
+  // exitScope();
 }
 
 // ----------------------------------------------------------------------
 vector<yytokentype> stackSwitchCases;
 
-void enterSwitch(yytokentype type) {
-  stackSwitchCases.push_back(type);
-}
+void enterSwitch(yytokentype type) { stackSwitchCases.push_back(type); }
 
 bool warnConstSwitcExpr(Expr *expr) {
   if (expr->isConst) {
@@ -481,7 +503,5 @@ bool validateSwitchCase(Expr *expr) {
   return true;
 }
 
-void exitSwitch() {
-  stackSwitchCases.pop_back();
-}
+void exitSwitch() { stackSwitchCases.pop_back(); }
 // ----------------------------------------------------------------------
