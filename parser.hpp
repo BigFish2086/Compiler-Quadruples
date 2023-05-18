@@ -438,3 +438,30 @@ void exitFunc() {
   exitScope();
 }
 
+// ----------------------------------------------------------------------
+vector<yytokentype> stackSwitchCases;
+
+void enterSwitch(yytokentype type) {
+  stackSwitchCases.push_back(type);
+}
+
+bool warnConstSwitcExpr(Expr *expr) {
+  if (expr->isConst) {
+    cout << "Warning: switch expression is constant" << endl;
+    return true;
+  }
+  return false;
+}
+
+bool validateSwitchCase(Expr *expr) {
+  yytokentype switchType = stackSwitchCases.back();
+  if (switchType != expr->type()) {
+    throw std::runtime_error("switch case type mismatch");
+  }
+  return true;
+}
+
+void exitSwitch() {
+  stackSwitchCases.pop_back();
+}
+// ----------------------------------------------------------------------
