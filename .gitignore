@@ -2,9 +2,10 @@ team_members.txt
 
 lex.yy.c
 
-y.tab.h
-y.tab.c
+*.tab.h
+*.tab.c
 
 test
+*.q
 
 compiler
