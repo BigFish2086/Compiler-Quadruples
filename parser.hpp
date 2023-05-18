@@ -268,7 +268,7 @@ public:
     this->scope = current_scope;
     this->isUsed = false;
   }
-  ~ID() {}
+  virtual ~ID() {}
 };
 
 // ----------------------------------------------------------------------
@@ -329,6 +329,7 @@ private:
 // ----------------------------------------------------------------------
 struct StrList {
   vector<string> list;
+  StrList() {}
   StrList(string item) { this->append(item); }
   StrList *append(string item) {
     list.push_back(item);
@@ -338,6 +339,7 @@ struct StrList {
 
 struct TypedList {
   vector<yytokentype> list;
+  TypedList() {}
   TypedList(yytokentype item) { this->append(item); }
   TypedList *append(yytokentype item) {
     list.push_back(item);
@@ -354,6 +356,10 @@ public:
       : ID(_name) {
     this->type = _type;
     this->funcParamsTypes = _paramsTypes;
+  }
+  FuncID(yytokentype _type, string _name, TypedList *_paramsTypes) : ID(_name) {
+    this->type = _type;
+    this->funcParamsTypes = _paramsTypes->list;
   }
   ~FuncID() {}
 };
@@ -380,7 +386,7 @@ public:
 };
 
 // ----------------------------------------------------------------------
-vector<map<string, ID *>> symbolTable;
+vector<map<string, ID *>> symbolTable(1);
 
 void enterScope() {
   symbolTable.push_back(map<string, ID *>());
@@ -399,7 +405,9 @@ void exitScope() {
   current_scope--;
 }
 
-template <typename T> T *getID(string name) {
+template <typename T, typename = typename std::enable_if<
+                          std::is_base_of<ID, T>::value, T>::type>
+T *getID(const string &name) {
   T *id = nullptr;
   for (int i = symbolTable.size() - 1; i >= 0; i--) {
     if (symbolTable[i].find(name) != symbolTable[i].end()) {
