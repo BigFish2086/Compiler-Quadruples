@@ -314,6 +314,24 @@ private:
 };
 
 // ----------------------------------------------------------------------
+struct StrList {
+  vector<string> list;
+  StrList(string item) { this->append(item); }
+  StrList *append(string item) {
+    list.push_back(item);
+    return this;
+  }
+};
+
+struct TypedList {
+  vector<yytokentype> list;
+  TypedList(yytokentype item) { this->append(item); }
+  TypedList *append(yytokentype item) {
+    list.push_back(item);
+    return this;
+  }
+};
+
 class FuncID : public ID {
 public:
   yytokentype type;
