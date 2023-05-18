@@ -247,45 +247,73 @@ public:
   string name;
   int line;
   int scope;
+  bool isUsed;
 
   ID(string _name) {
     this->name = _name;
     this->line = yylineno;
     this->scope = current_scope;
+    this->isUsed = false;
   }
   ~ID() {}
 };
 
+// ----------------------------------------------------------------------
 class VarID : public ID {
 public:
   yytokentype type;
-  Value value;
+  Expr expr;
   bool isVar = false;
-  bool isUsed = false;
   bool isConst = false;
   bool isInitialized = false;
 
-  VarID(yytokentype _type, string _name, bool _isConst)
-      : ID(_name) {
+  // for variables
+  VarID(yytokentype _type, string _name, bool _isInit = false) : ID(_name) {
     this->type = _type;
-    this->isConst = _isConst;
+    this->isInitialized = _isInit;
+  }
+  // for const variables
+  VarID(yytokentype _type, string _name, Expr *_expr) : ID(_name) {
+    this->type = _type;
+    this->isConst = true;
+    this->isInitialized = true;
+    this->__setExpr(_expr);
   }
   ~VarID() {}
 
-  void setVal(Value _val) {
-    this->value = _val;
+  // TODO: call doCast() when needed
+  // checks are:
+  // 1. if the variable is const, then it cannot be assigned again
+  // 2. type of the variable and the expression must match or be convertible
+  void setExpr(Expr *_expr) {
+    if (this->isConst) {
+      throw std::runtime_error("cannot assign to const variable " + this->name);
+    }
+    this->__setExpr(_expr);
+  }
+
+  Expr *getExpr() {
+    if (!this->isInitialized) {
+      throw std::runtime_error("variable " + this->name +
+                               " is not initialized");
+    }
+    return &this->expr;
+  }
+
+private:
+  void __setExpr(Expr *_expr) {
+    if (!canCast(this->type, _expr->type())) {
+      throw std::runtime_error("cannot assign Variable " + this->name +
+                               " of type " + type2Str[this->type] +
+                               " to expression of type " +
+                               type2Str[_expr->type()]);
+    }
+    this->expr = *_expr;
     this->isInitialized = true;
   }
-  
-  Value getVal() {
-    if (!this->isInitialized) {
-      throw std::runtime_error("variable " + this->name + " is not initialized");
-    }
-    return this->value;
-  }
-
 };
 
+// ----------------------------------------------------------------------
 class FuncID : public ID {
 public:
   yytokentype type;
