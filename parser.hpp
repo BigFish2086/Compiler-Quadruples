@@ -412,3 +412,29 @@ void declareID(ID *id) {
   symbolTable[current_scope][id->name] = id;
 }
 
+// ----------------------------------------------------------------------
+vector<pair<yytokentype, bool>> funcReturnTypesStack;
+
+void enterFunc(yytokentype type) {
+  funcReturnTypesStack.emplace_back(type, false);
+  enterScope();
+}
+
+void checkFuncReturnType(Expr *expr) {
+  yytokentype returnType = funcReturnTypesStack.back().first;
+  if (returnType != expr->type()) {
+    throw std::runtime_error("function return type mismatch");
+  }
+  funcReturnTypesStack.back().second = true;
+}
+
+void exitFunc() {
+  auto [type, isReturned] = funcReturnTypesStack.back();
+  funcReturnTypesStack.pop_back();
+  if (!isReturned) {
+    throw std::runtime_error("function does not return any value");
+  }
+  // TODO: print the needed quads to simulate the return type
+  exitScope();
+}
+
