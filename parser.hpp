@@ -242,6 +242,7 @@ struct Expr {
   }
 };
 
+// ----------------------------------------------------------------------
 class ID {
 public:
   string name;
@@ -345,6 +346,7 @@ public:
   ~FuncID() {}
 };
 
+// ----------------------------------------------------------------------
 class EnumID : public ID {
 public:
   vector<string> enumVariants;
@@ -365,4 +367,48 @@ public:
   ~EnumVariantID() {}
 };
 
+// ----------------------------------------------------------------------
+vector<map<string, ID *>> symbolTable;
+
+void enterScope() {
+  symbolTable.push_back(map<string, ID *>());
+  current_scope++;
+}
+
+void exitScope() {
+  map<string, ID *> scope = symbolTable[current_scope];
+  for (auto it : scope) {
+    ID *id = it.second;
+    if (!id->isUsed) {
+      cout << "Warning: ID " << id->name << " declared but not used" << endl;
+    }
+  }
+  symbolTable.pop_back();
+  current_scope--;
+}
+
+template <typename T> T *getID(string name) {
+  T *id = nullptr;
+  for (int i = symbolTable.size() - 1; i >= 0; i--) {
+    if (symbolTable[i].find(name) != symbolTable[i].end()) {
+      id = dynamic_cast<T *>(symbolTable[i][name]);
+      if (id != nullptr) {
+        return id;
+      }
+    }
+  }
+  if (id == nullptr) {
+    throw std::runtime_error("ID " + name + " is not declared");
+  }
+  id->isUsed = true;
+  return id;
+}
+
+void declareID(ID *id) {
+  if (symbolTable[current_scope].find(id->name) !=
+      symbolTable[current_scope].end()) {
+    throw std::runtime_error("ID " + id->name + " already declared");
+  }
+  symbolTable[current_scope][id->name] = id;
+}
 
