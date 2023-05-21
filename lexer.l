@@ -20,13 +20,14 @@
 "switch"      return SWITCH;
 "case"        return CASE;
 "default"     return DEFAULT;
-"break"       return BREAK;
 
 "while"       return WHILE;
 "for"         return FOR;
 
 "print"       return PRINT;
 "return"      return RETURN;
+
+"::"  return DOUBLE_COLON;
 
 "+"     return PLUS;
 "-"     return MINUS;
