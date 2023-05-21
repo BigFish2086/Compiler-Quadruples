@@ -73,3 +73,23 @@ struct Expr {
   string repr() const { return std::visit(repr_op(), value); }
 };
 
+struct EnumExpr : public Expr{
+  string enumName;
+
+  EnumExpr(const string &_enumName, int v) : Expr(v), enumName(_enumName) {}
+
+};
+
+struct ExprStmt {
+  Expr *expr;
+  string reprsentation;
+  ExprStmt(Expr *e) : expr(e) {}
+  ExprStmt(Expr *e, const string &str) : expr(e), reprsentation(str) {}
+  ~ExprStmt() { delete expr; }
+
+  void setRepr(const string &str) { reprsentation = str; }
+  string repr() const { return reprsentation; }
+
+  Expr *getExpr() const { return expr; }
+  yytokentype type() const { return expr->type(); }
+};
