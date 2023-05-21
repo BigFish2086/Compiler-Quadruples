@@ -1,43 +1,62 @@
+#pragma once
+
+#include <string>
+
 #define error(msg) throw std::runtime_error(msg)
+#define warning(msg) std::cerr << "warning: " << msg << std::endl
 
-#define push(arg) output << "\tPUSH " << arg << '\n'
-#define pop() output << "\tPOP" << '\n'
+#define syntax_error_msg                                                          \
+  error("syntax error #" + std::to_string(++syntax_errors) +                   \
+        " near: " + yytext + " in line #" + std::to_string(yylineno))
 
-#define pushs(str) output << "\tPUSH " << quoted(str) << '\n'
+using std::string;
 
-#define pushv(name, scp) output << "\tPUSH v_" << name << scp << '\n'
-#define popv(name, scp) output << "\tPOP v_" << name << scp << '\n'
+string quoted(const string &str) { return "\"" + str + "\""; }
 
-#define popt() output << "\tPOP " << "tmp" << '\n'
-#define pusht() output << "\tPUSH " << "tmp" << '\n'
+string push(const string &arg) { return "push " + arg + "\n"; }
+string pop() { return "pop\n"; }
 
-#define int2flt() output << "\tINT2FLT" << '\n'
-#define flt2int() output << "\tFLT2INT" << '\n'
+string pushs(const string &str) { return "push " + quoted(str) + "\n"; }
 
-#define funcdef(name, scp) output << "\nDEF f_" << name << scp << ":" << '\n'
-#define funcall(name, scp) output << "\tCALL f_" << name << scp << '\n'
-#define ret() output << "\tRET" << '\n'
+string pushv(const string &name, int scp) {
+  return "push v_" + name + std::to_string(scp) + "\n";
+}
+string popv(const string &name, int scp) {
+  return "pop v_" + name + std::to_string(scp) + "\n";
+}
 
-#define print() output << "\tPRINT" << '\n'
-#define newline() output << '\n'
+string popt() { return "pop tmp\n"; }
+string pusht() { return "push tmp\n"; }
 
-// arithmetic Operations
-#define neg() output << "\tNEG" << '\n'
-#define add() output << "\tADD" << '\n'
-#define sub() output << "\tSUB" << '\n'
-#define mult() output << "\tMULT" << '\n'
-#define div() output << "\tDIV" << '\n'
+string int2flt() { return "int2flt\n"; }
+string flt2int() { return "flt2int\n"; }
 
-// comparison operations
-#define lt() output << "\tLT" << '\n'
-#define gt() output << "\tGT" << '\n'
-#define le() output << "\tLE" << '\n'
-#define ge() output << "\tGE" << '\n'
-#define eq() output << "\tEQ" << '\n'
-#define ne() output << "\tNE" << '\n'
+string funcdef(const string &name, int scp) {
+  return "def f_" + name + std::to_string(scp) + ":\n";
+}
+string funcall(const string &name) { return "call f_" + name + "\n"; }
+string ret() { return "ret\n"; }
 
-// logical opeartions
-#define qand() output << "\tAND" << '\n'
-#define qor() output << "\tOR" << '\n'
-#define qnot() output << "\tNOT" << '\n'
+string print() { return "print\n"; }
 
+string neg() { return "neg\n"; }
+string add() { return "add\n"; }
+string sub() { return "sub\n"; }
+string mult() { return "mult\n"; }
+string div() { return "div\n"; }
+
+string lt() { return "lt\n"; }
+string gt() { return "gt\n"; }
+string le() { return "le\n"; }
+string ge() { return "ge\n"; }
+string eq() { return "eq\n"; }
+string ne() { return "ne\n"; }
+
+string qand() { return "and\n"; }
+string qor() { return "or\n"; }
+string qnot() { return "not\n"; }
+
+string jmp(const string &label) { return "jmp " + label + "\n"; }
+string jz(const string &label) { return "jz " + label + "\n"; }
+
+string label(const string &label) { return "label" + label + ":\n"; }
