@@ -51,13 +51,13 @@ map<int, string> type2Str = {
 };
 
 // map types to default values
-// map<int, Value> type2Default = {
-//   {INTEGER,   0},
-//   {FLOAT,     0.0},
-//   {BOOL,      false},
-//   {STRING,    ""},
-//   {ENUM_TYPE, 0}
-// };
+map<int, Value> type2Default = {
+  {INTEGER,   Value(0)},
+  {FLOAT,     Value(0.0f)},
+  {BOOL,      Value(false)},
+  {STRING,    Value("")},
+  {ENUM_TYPE, Value(0)}
+};
 
 bool canCast(const int &from, const int &to) {
   if (from == to) {

@@ -26,6 +26,12 @@ public:
            " T: " + type2Str[this->type];
   }
 
+  virtual vector<string> vstr() const {
+    return {"N: " + this->name, "L# " + to_string(this->line),
+            "S@ " + to_string(this->scope), "U: " + to_string(this->isUsed),
+            "T: " + type2Str[this->type]};
+  }
+
   friend ostream &operator<<(ostream &os, shared_ptr<ID> id) {
     os << id->str();
     return os;
@@ -85,7 +91,22 @@ public:
     } 
     return me;
   }
-  
+
+  vector<string> vstr() const override {
+    vector<string> parent = ID::vstr();
+    vector<string> me = parent;
+    me.push_back("@VarID");
+    me.push_back("I: " + to_string(this->isInitialized));
+    me.push_back("C: " + to_string(this->isConst));
+    if(this->expr != nullptr) {
+      me.push_back("Expr: " + this->expr->repr());
+    }
+    if (this->isEnum) {
+      me.push_back("EnumType: " + this->enumName);
+    }
+    return me;
+  }
+
   // TODO: call doCast() when needed
   // checks are:
   // 1. if the variable is const, then it cannot be assigned again
@@ -162,6 +183,14 @@ public:
     string me = parent + " @FuncID";
     return me;
   }
+
+  vector<string> vstr() const override {
+    vector<string> parent = ID::vstr();
+    vector<string> me = parent;
+    me.push_back("@FuncID");
+    return me;
+  }
+
 };
 
 // ----------------------------------------------------------------------
@@ -201,6 +230,13 @@ public:
   string str() const override {
     string parent = ID::str();
     string me = parent + " @EnumID";
+    return me;
+  }
+  
+  vector<string> vstr() const override {
+    vector<string> parent = ID::vstr();
+    vector<string> me = parent;
+    me.push_back("@EnumID");
     return me;
   }
 };

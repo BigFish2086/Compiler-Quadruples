@@ -29,8 +29,7 @@ void exitScope() {
 template <typename T>
 concept IDType = std::is_base_of<ID, T>::value;
 
-template <IDType T>
-shared_ptr<T> getID(const string &name) {
+template <IDType T> shared_ptr<T> getID(const string &name) {
   shared_ptr<T> id = nullptr;
   for (int i = symbolTable.size() - 1; i >= 0; i--) {
     if (symbolTable[i].find(name) != symbolTable[i].end()) {
@@ -56,17 +55,36 @@ void declareID(shared_ptr<ID> id) {
 }
 
 void logSymbolTable() {
-  string line(90, '-');
-  string info = "N: Name L# Line S@ Scope U: Used T: Type [I: isInit] [C: isConst]";
+  string line(105, '-');
+  string info =
+      "N: Name L# Line S@ Scope U: Used T: Type [ID Type] [I: isInit] [C: isConst] [ID Expr] [Enum Type]";
   symlog << line << '\n' << info << '\n' << line << "\n\n";
+  vector<vector<string>> table;
+  int numberOfCols = 0;
   for (int i = 0; i < (int)symbolTable.size(); i++) {
     for (auto it : symbolTable[i]) {
-      symlog << it.second << '\n';
+      table.push_back(it.second->vstr());
+      numberOfCols = max(numberOfCols, (int)table.back().size());
     }
+  }
+  vector<int> max_len(numberOfCols, 0);
+  for (int r = 0; r < (int)table.size(); r++) {
+    for (int c = 0; c < (int)table[r].size(); c++) {
+      int len = table[r][c].length();
+      max_len[c] = max(max_len[c], len);
+    }
+  }
+  for (int r = 0; r < (int)table.size(); r++) {
+    for (int c = 0; c < (int)table[r].size(); c++) {
+      symlog << setw(max_len[c] + 3) << left << table[r][c];
+      if (c != (int)table[r].size() - 1) {
+        symlog << "| ";
+      }
+    }
+    symlog << '\n';
   }
   symlog << "\n\n";
 }
-
 
 // ----------------------------------------------------------------------
 vector<pair<yytokentype, bool>> funcReturnTypesStack;
@@ -119,6 +137,5 @@ shared_ptr<Expr> callingFunc(const string &name, const TypedList *paramsTypes) {
       error("function " + name + " called with wrong argument type");
     }
   }
-  return shared_ptr<Expr>(new Expr(funcID->type));
+  return shared_ptr<Expr>(new Expr(type2Default[funcID->type]));
 }
-
