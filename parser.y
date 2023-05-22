@@ -1,13 +1,54 @@
 %{
   #include <iostream>
   #include <string>
+  #include <vector>
+  #include <memory>
   #include "parser.hpp"
+  #define all(v) (v).begin(), (v).end()
   using namespace std;
 
   extern int yylex();
   void yyerror(string e) {}
 
   extern FILE* yyin;
+
+  vector<GStmt*> gstmtv;
+  vector<ExprStmt*> exprv;
+  vector<SwitchStmt*> switchv;
+  vector<ForStmt*> forv;
+  vector<WhileStmt*> whilev;
+  vector<IFStmt*> ifv;
+
+  template <typename T>
+  struct vdel : public unary_function<T*, void> {
+    void operator()(T* ptr) const {
+      delete ptr;
+    }
+  };
+
+  void cleanup() {
+    cerr << "cleaning up" << endl;
+    cerr << "gstmtv size: " << gstmtv.size() << endl;
+    cerr << "exprv size: " << exprv.size() << endl;
+    cerr << "switchv size: " << switchv.size() << endl;
+    cerr << "forv size: " << forv.size() << endl;
+    cerr << "whilev size: " << whilev.size() << endl;
+    cerr << "ifv size: " << ifv.size() << endl;
+
+    for_each(all(gstmtv), vdel<GStmt>());
+    for_each(all(exprv), vdel<ExprStmt>());
+    for_each(all(switchv), vdel<SwitchStmt>());
+    for_each(all(forv), vdel<ForStmt>());
+    for_each(all(whilev), vdel<WhileStmt>());
+    for_each(all(ifv), vdel<IFStmt>());
+
+    gstmtv.clear();
+    exprv.clear();
+    switchv.clear();
+    forv.clear();
+    whilev.clear();
+    ifv.clear();
+  }
 %}
 
 %define api.value.type union
@@ -64,12 +105,12 @@ type:
   ;
 
 program: 
-  stmts { exitScope(); outputFile << $1->repr(); } 
+  stmts { exitScope(); outputFile << $1->repr(); /* cleanup();*/ } 
   ;
 
 stmts:
    stmts stmt  { string repr = $2->repr(); $$ = $1->append(repr); }
-   | %empty { $$ = new GStmt(""); }
+   | %empty { $$ = new GStmt(""); gstmtv.push_back($$); }
   ;
 
 stmt:
@@ -77,27 +118,27 @@ stmt:
   | assignment ';'
   | declaration ';'
   | function_declaration
-  | expr ';'  { pop(); $$ = new GStmt(""); }
+  | expr ';'  { $$ = new GStmt($1->repr() + pop()); gstmtv.push_back($$); }
   | print_stmt ';'
   | return_stmt ';'
-  | if_stmt { $$ = new GStmt($1->repr()); }
-  | while_stmt { $$ = new GStmt($1->repr()); }
-  | for_stmt { $$ = new GStmt($1->repr()); }
-  | switch_stmt { $$ = new GStmt($1->repr()); }
+  | if_stmt { $$ = new GStmt($1->repr()); gstmtv.push_back($$); }
+  | while_stmt { $$ = new GStmt($1->repr()); gstmtv.push_back($$); }
+  | for_stmt { $$ = new GStmt($1->repr()); gstmtv.push_back($$); }
+  | switch_stmt { $$ = new GStmt($1->repr()); gstmtv.push_back($$); }
   | ERROR { syntax_error_msg; }
-  | ';' { $$ = new GStmt(""); }
+  | ';' { $$ = new GStmt(""); gstmtv.push_back($$); }
   ;
 
 print_stmt:
-   PRINT expr { $$ = new GStmt($2->repr() + print()); }
+   PRINT expr { $$ = new GStmt($2->repr() + print()); gstmtv.push_back($$); }
   ;
 
 return_stmt:
-   RETURN expr { validFuncReturnType($2->getExpr()); $$ = new GStmt($2->repr() + ret()); }
+   RETURN expr { validFuncReturnType($2->getExpr()); $$ = new GStmt($2->repr() + ret()); gstmtv.push_back($$); }
   ;
 
 code_block:
-   '{' { enterScope(); } stmts '}' { exitScope(); $$ = new GStmt($3->repr()); }
+   '{' { enterScope(); } stmts '}' { exitScope(); $$ = new GStmt($3->repr()); gstmtv.push_back($$); }
   ;
 
 assignment:
@@ -107,11 +148,12 @@ assignment:
     id->setExpr($3->getExpr());
     string repr = $3->repr() + popv($1, id->scope);
     $$ = new GStmt(repr);
+    gstmtv.push_back($$);
   }
   ;
 
 declaration:
-    type IDENTIFIER { declareID(new VarID($1, $2)); $$ = new GStmt(""); }
+    type IDENTIFIER { declareID(new VarID($1, $2)); $$ = new GStmt(""); gstmtv.push_back($$); }
   | type IDENTIFIER '=' expr 
     { 
       VarID* id = new VarID($1, $2);
@@ -119,6 +161,7 @@ declaration:
       id->setExpr($4->getExpr());
       string repr = $4->repr() + popv($2, id->scope);
       $$ = new GStmt(repr);
+      gstmtv.push_back($$);
     }
   | CONST_TYPE type IDENTIFIER '=' expr
     { 
@@ -126,6 +169,7 @@ declaration:
       declareID(id);
       string repr = $5->repr() + popv($3, id->scope);
       $$ = new GStmt(repr);
+      gstmtv.push_back($$);
     }
   // for enums
   | ENUM_TYPE IDENTIFIER '{' enum_variants '}'
@@ -133,6 +177,7 @@ declaration:
       EnumID *id = new EnumID($2, $4);
       declareID(id);
       $$ = new GStmt("");
+      gstmtv.push_back($$);
     }
   | IDENTIFIER IDENTIFIER
     {
@@ -140,6 +185,7 @@ declaration:
       VarID *vid = new VarID($2, eid->name);
       declareID(vid);
       $$ = new GStmt("");
+      gstmtv.push_back($$);
     }
   | IDENTIFIER IDENTIFIER '=' expr  // should be EnmStmt(EnumExpr)
     {
@@ -148,6 +194,7 @@ declaration:
       vid->setExpr($4->getExpr());
       declareID(vid);
       $$ = new GStmt("");
+      gstmtv.push_back($$);
     }
   ;
 
@@ -157,143 +204,160 @@ expr:
       VarID *id = getID<VarID>($1);
       string repr = pushv($1, id->scope);
       $$ = new ExprStmt(id->getExpr(), repr);
+      exprv.push_back($$);
     }
   | INTEGER 
     { 
-      Expr *expr = new Expr(Value($1));
+      shared_ptr<Expr> expr(new Expr(Value($1)));
       string repr = push(expr->repr());
       $$ = new ExprStmt(expr, repr);
+      exprv.push_back($$);
     }
   | FLOAT
     { 
-      Expr *expr = new Expr(Value($1));
+      shared_ptr<Expr> expr(new Expr(Value($1)));
       string repr = push(expr->repr());
       $$ = new ExprStmt(expr, repr);
+      exprv.push_back($$);
     }
   | BOOL
     {
-      Expr *expr = new Expr(Value($1));
+      shared_ptr<Expr> expr(new Expr(Value($1)));
       string repr = push(expr->repr());
       $$ = new ExprStmt(expr, repr);
+      exprv.push_back($$);
     }
   | STRING
     {
-      Expr *expr = new Expr(Value($1));
+      shared_ptr<Expr> expr(new Expr(Value($1)));
       string repr = push(expr->repr());
       $$ = new ExprStmt(expr, repr);
+      exprv.push_back($$);
     }
 
-  | expr_in_parenthsis        { $$ = $1; }
+  | expr_in_parenthsis        { $$ = $1; exprv.push_back($$); }
 
   // enums
   | IDENTIFIER DOUBLE_COLON IDENTIFIER
     {
       EnumID *eid = getID<EnumID>($1);
       int variant = eid->getVariant($3);
-      EnumExpr *expr = new EnumExpr(eid->name, variant);
+      shared_ptr<Expr> expr(new EnumExpr(eid->name, variant));  // ??
       string repr = push($1);
       $$ = new ExprStmt(expr, repr);
+      exprv.push_back($$);
     }
 
   // to be able to do something like `print adder(1, 2.2);`
-  | function_invokation       { $$ = $1; }
+  | function_invokation       { $$ = $1; exprv.push_back($$); }
 
   // arithmetic operations
   | MINUS expr %prec UMINUS
     { 
-      Expr *expr = -*($2->getExpr());
+      shared_ptr<Expr> expr(-*($2->getExpr()));
       ExprStmt *estmt = new ExprStmt(expr);
       string repr = $2->repr() + neg();
       estmt->setRepr(repr);
       $$ = estmt;
+      exprv.push_back($$);
     }
   | expr PLUS expr         
     {
-      Expr *expr = *($1->getExpr())+$3->getExpr();
+      shared_ptr<Expr> expr(*($1->getExpr())+$3->getExpr());
       ExprStmt *estmt = new ExprStmt(expr);
       string repr = $1->repr() + $3->repr() + add();
       estmt->setRepr(repr);
       $$ = estmt;
+      exprv.push_back($$);
     }
   | expr MINUS expr        
     {
-      Expr *expr = *($1->getExpr())-$3->getExpr();
+      shared_ptr<Expr> expr(*($1->getExpr())-$3->getExpr());
       ExprStmt *estmt = new ExprStmt(expr);
       string repr = $1->repr() + $3->repr() + sub();
       estmt->setRepr(repr);
       $$ = estmt;
+      exprv.push_back($$);
     }
   | expr MULT expr         
     {
-      Expr *expr = *($1->getExpr())*$3->getExpr();
+      shared_ptr<Expr> expr(*($1->getExpr())*$3->getExpr());
       ExprStmt *estmt = new ExprStmt(expr);
       string repr = $1->repr() + $3->repr() + mult();
       estmt->setRepr(repr);
       $$ = estmt;
+      exprv.push_back($$);
     }
   | expr DIV expr          
     {
-      Expr *expr = *($1->getExpr())/$3->getExpr();
+      shared_ptr<Expr> expr(*($1->getExpr())/$3->getExpr());
       ExprStmt *estmt = new ExprStmt(expr);
       string repr = $1->repr() + $3->repr() + div();
       estmt->setRepr(repr);
       $$ = estmt;
+      exprv.push_back($$);
     }
 
   // comparison operations
   | expr LT expr           
     {
       bool res = *($1->getExpr())<$3->getExpr();
-      Expr *expr = new Expr(Value(res));
+      shared_ptr<Expr> expr(new Expr(Value(res)));
       ExprStmt *estmt = new ExprStmt(expr);
       string repr = $1->repr() + $3->repr() + lt();
       estmt->setRepr(repr);
       $$ = estmt;
+      exprv.push_back($$);
     }
   | expr GT expr           
     {
       bool res = *($1->getExpr())>$3->getExpr();
-      Expr *expr = new Expr(Value(res));
+      shared_ptr<Expr> expr(new Expr(Value(res)));
       ExprStmt *estmt = new ExprStmt(expr);
       string repr = $1->repr() + $3->repr() + gt();
       estmt->setRepr(repr);
       $$ = estmt;
+      exprv.push_back($$);
     }
   | expr LE expr           
     {
       bool res = *($1->getExpr())<=$3->getExpr();
-      Expr *expr = new Expr(Value(res));
+      shared_ptr<Expr> expr(new Expr(Value(res)));
       ExprStmt *estmt = new ExprStmt(expr);
       string repr = $1->repr() + $3->repr() + le();
       estmt->setRepr(repr);
       $$ = estmt;
+      exprv.push_back($$);
     }
   | expr GE expr           
     {
       bool res = *($1->getExpr())>=$3->getExpr();
-      Expr *expr = new Expr(Value(res));
+      shared_ptr<Expr> expr(new Expr(Value(res)));
       ExprStmt *estmt = new ExprStmt(expr);
       string repr = $1->repr() + $3->repr() + ge();
       estmt->setRepr(repr);
       $$ = estmt;
+      exprv.push_back($$);
     }
   | expr EQ expr           
     {
       bool res = *($1->getExpr())==$3->getExpr();
-      Expr *expr = new Expr(Value(res));
+      shared_ptr<Expr> expr(new Expr(Value(res)));
       ExprStmt *estmt = new ExprStmt(expr);
       string repr = $1->repr() + $3->repr() + eq();
       estmt->setRepr(repr);
       $$ = estmt;
+      exprv.push_back($$);
     }
   | expr NE expr           
     {
       bool res = *($1->getExpr())!=$3->getExpr();
-      Expr *expr = new Expr(Value(res));
+      shared_ptr<Expr> expr(new Expr(Value(res)));
       ExprStmt *estmt = new ExprStmt(expr);
       string repr = $1->repr() + $3->repr() + ne();
       estmt->setRepr(repr);
       $$ = estmt;
+      exprv.push_back($$);
     }
 
   // logical operations - TODO: solve the resultant error
@@ -315,10 +379,11 @@ function_declaration:
   type IDENTIFIER { enterFunc($1); } '(' typed_parameter_list ')' 
   code_block 
   { 
-    exitFunc(); 
     declareID(new FuncID($1, $2, $5));
     funcHasReturnStatment($2);
-    $$ = new GStmt(funcdef($2, current_scope) + $5->repr());
+    $$ = new GStmt(funcdef($2, current_scope) + $5->repr() + $7->repr());
+    exitFunc(); 
+    gstmtv.push_back($$);
   }
   ;
 
@@ -326,13 +391,17 @@ typed_parameter_list:
     typed_parameter_list ',' type IDENTIFIER
     { 
       string repr = popv($4, current_scope);
-      declareID(new VarID($3, $4, true));
+      VarID *var = new VarID($3, $4);
+      var->setExpr(shared_ptr<Expr>(new Expr()));
+      declareID(var);
       $$ = $1->append($3, repr);
     }
   | type IDENTIFIER
     { 
       string repr = popv($2, current_scope);
-      declareID(new VarID($1, $2, true)); 
+      VarID *var = new VarID($1, $2);
+      var->setExpr(shared_ptr<Expr>(new Expr()));
+      declareID(var);
       $$ = new TypedList($1, repr);
     }
   | %empty { $$ = new TypedList(); }
@@ -341,8 +410,7 @@ typed_parameter_list:
 function_invokation:
     IDENTIFIER '(' argument_list ')' 
     { 
-      Expr *expr = callingFunc($1, $3); 
-      ExprStmt *estmt = new ExprStmt(expr);
+      ExprStmt *estmt = new ExprStmt(callingFunc($1, $3));
       estmt->setRepr($3->repr() + funcall($1));
       $$ = estmt;
     }
@@ -362,11 +430,12 @@ if_stmt:
       list->append($1);
       if($2 != NULL) list->append($2);
       $$ = new IFStmt(list);
+      ifv.push_back($$);
     }
   ;
 
 if_part:
-    IF expr_in_parenthsis code_block { $$ = new IFPart($2->getExpr(), $3->repr());}
+    IF expr_in_parenthsis code_block { $$ = new IFPart($2->getExpr(), $3->repr()); }
   ;
 
 optional_else_part:
@@ -375,7 +444,11 @@ optional_else_part:
   ;
 
 while_stmt:
-    WHILE expr_in_parenthsis code_block { $$ = new WhileStmt($2->repr(), $3->repr(), $2->getExpr()); }
+    WHILE expr_in_parenthsis code_block 
+    {
+      $$ = new WhileStmt($2->repr(), $3->repr(), $2->getExpr());
+      whilev.push_back($$);
+    }
   ;
 
 for_stmt:
@@ -389,6 +462,7 @@ for_stmt:
       b6 = $6->repr();
       $$ = new ForStmt(b4, b6, b8, $10->repr(), $6->getExpr());
       exitScope();
+      forv.push_back($$);
     }
   ;
 
@@ -408,6 +482,7 @@ switch_stmt:
     {
       if($5 == NULL) $$ = new SwitchStmt($2->getExpr(), $4);
       else $$ = new SwitchStmt($2->getExpr(), $4->append($5));
+      switchv.push_back($$);
     }
   ;
 
@@ -444,6 +519,7 @@ int main(int argc, char** argv) {
     cerr << "Found " << syntax_errors <<" syntax error(s)" <<endl;
     abort();
   }
+  cleanup();
 
   return 0;
 }
