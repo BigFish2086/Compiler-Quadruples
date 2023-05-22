@@ -144,7 +144,7 @@ code_block:
 assignment:
   IDENTIFIER '=' expr 
   { 
-    VarID *id = getID<VarID>($1);
+    shared_ptr<VarID> id = getID<VarID>($1);
     id->setExpr($3->getExpr());
     string repr = $3->repr() + popv($1, id->scope);
     $$ = new GStmt(repr);
@@ -153,10 +153,16 @@ assignment:
   ;
 
 declaration:
-    type IDENTIFIER { declareID(new VarID($1, $2)); $$ = new GStmt(""); gstmtv.push_back($$); }
+    type IDENTIFIER 
+    { 
+      shared_ptr<VarID> id (new VarID($1, $2));
+      declareID(id);
+      $$ = new GStmt("");
+      gstmtv.push_back($$);
+    }
   | type IDENTIFIER '=' expr 
     { 
-      VarID* id = new VarID($1, $2);
+      shared_ptr<VarID> id (new VarID($1, $2));
       declareID(id);
       id->setExpr($4->getExpr());
       string repr = $4->repr() + popv($2, id->scope);
@@ -165,7 +171,7 @@ declaration:
     }
   | CONST_TYPE type IDENTIFIER '=' expr
     { 
-      VarID* id = new VarID($2, $3, $5->getExpr());
+      shared_ptr<VarID> id (new VarID($2, $3, $5->getExpr()));
       declareID(id);
       string repr = $5->repr() + popv($3, id->scope);
       $$ = new GStmt(repr);
@@ -174,23 +180,23 @@ declaration:
   // for enums
   | ENUM_TYPE IDENTIFIER '{' enum_variants '}'
     {
-      EnumID *id = new EnumID($2, $4);
-      declareID(id);
+      shared_ptr<EnumID> eid(new EnumID($2, $4));
+      declareID(eid);
       $$ = new GStmt("");
       gstmtv.push_back($$);
     }
   | IDENTIFIER IDENTIFIER
     {
-      EnumID *eid = getID<EnumID>($1);
-      VarID *vid = new VarID($2, eid->name);
+      shared_ptr<EnumID> eid = getID<EnumID>($1);
+      shared_ptr<VarID> vid(new VarID($2, eid->name));
       declareID(vid);
       $$ = new GStmt("");
       gstmtv.push_back($$);
     }
   | IDENTIFIER IDENTIFIER '=' expr  // should be EnmStmt(EnumExpr)
     {
-      EnumID *eid = getID<EnumID>($1);
-      VarID *vid = new VarID($2, eid->name);
+      shared_ptr<EnumID> eid = getID<EnumID>($1);
+      shared_ptr<VarID> vid(new VarID($2, eid->name));
       vid->setExpr($4->getExpr());
       declareID(vid);
       $$ = new GStmt("");
@@ -201,7 +207,7 @@ declaration:
 expr:
     IDENTIFIER 
     { 
-      VarID *id = getID<VarID>($1);
+      shared_ptr<VarID> id = getID<VarID>($1);
       string repr = pushv($1, id->scope);
       $$ = new ExprStmt(id->getExpr(), repr);
       exprv.push_back($$);
@@ -240,7 +246,7 @@ expr:
   // enums
   | IDENTIFIER DOUBLE_COLON IDENTIFIER
     {
-      EnumID *eid = getID<EnumID>($1);
+      shared_ptr<EnumID> eid = getID<EnumID>($1);
       int variant = eid->getVariant($3);
       shared_ptr<Expr> expr(new EnumExpr(eid->name, variant));  // ??
       string repr = push($1);
@@ -379,7 +385,8 @@ function_declaration:
   type IDENTIFIER { enterFunc($1); } '(' typed_parameter_list ')' 
   code_block 
   { 
-    declareID(new FuncID($1, $2, $5));
+    shared_ptr<FuncID> func(new FuncID($1, $2, $5));
+    declareID(func);
     funcHasReturnStatment($2);
     $$ = new GStmt(funcdef($2, current_scope) + $5->repr() + $7->repr());
     exitFunc(); 
@@ -391,7 +398,7 @@ typed_parameter_list:
     typed_parameter_list ',' type IDENTIFIER
     { 
       string repr = popv($4, current_scope);
-      VarID *var = new VarID($3, $4);
+      shared_ptr<VarID> var(new VarID($3, $4));
       var->setExpr(shared_ptr<Expr>(new Expr()));
       declareID(var);
       $$ = $1->append($3, repr);
@@ -399,7 +406,7 @@ typed_parameter_list:
   | type IDENTIFIER
     { 
       string repr = popv($2, current_scope);
-      VarID *var = new VarID($1, $2);
+      shared_ptr<VarID> var(new VarID($1, $2));
       var->setExpr(shared_ptr<Expr>(new Expr()));
       declareID(var);
       $$ = new TypedList($1, repr);

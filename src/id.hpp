@@ -94,7 +94,7 @@ private:
     }
 
     if (this->isEnum) {
-      EnumExpr *enumExpr = dynamic_cast<EnumExpr *>(_expr.get());
+      shared_ptr<EnumExpr> enumExpr = dynamic_pointer_cast<EnumExpr>(_expr);
       if (enumExpr == nullptr) {
         error("cannot assign non-enum expression to enum variable " +
               this->name);

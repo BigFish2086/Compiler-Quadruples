@@ -4,37 +4,37 @@
 #include "globals.hpp"
 #include "id.hpp"
 
-vector<map<string, ID *>> symbolTable(1);
+typedef shared_ptr<ID> IDPtr;
+typedef map<string, IDPtr> Scope;
+
+vector<Scope> symbolTable(1);
 
 void enterScope() {
-  symbolTable.push_back(map<string, ID *>());
+  symbolTable.push_back(Scope());
   current_scope++;
 }
 
 void exitScope() {
-  map<string, ID *> scope = symbolTable[current_scope];
+  Scope scope = symbolTable.back();
   for (auto it : scope) {
-    ID *id = it.second;
-    if(id == nullptr) {
-      continue;
-    }
+    auto id = it.second;
     if (!id->isUsed) {
       warning("ID " + id->name + " is not used");
     }
-    delete id;
-    id = 0;
   }
   symbolTable.pop_back();
   current_scope--;
 }
 
-template <typename T, typename = typename std::enable_if<
-                          std::is_base_of<ID, T>::value, T>::type>
-T *getID(const string &name) {
-  T *id = nullptr;
+template <typename T>
+concept IDType = std::is_base_of<ID, T>::value;
+
+template <IDType T>
+shared_ptr<T> getID(const string &name) {
+  shared_ptr<T> id = nullptr;
   for (int i = symbolTable.size() - 1; i >= 0; i--) {
     if (symbolTable[i].find(name) != symbolTable[i].end()) {
-      id = dynamic_cast<T *>(symbolTable[i][name]);
+      id = dynamic_pointer_cast<T>(symbolTable[i][name]);
       if (id != nullptr) {
         break;
       }
@@ -47,7 +47,7 @@ T *getID(const string &name) {
   return id;
 }
 
-void declareID(ID *id) {
+void declareID(shared_ptr<ID> id) {
   if (symbolTable[current_scope].find(id->name) !=
       symbolTable[current_scope].end()) {
     error("ID " + id->name + " already declared");
@@ -97,7 +97,7 @@ void exitFunc() {
 }
 
 shared_ptr<Expr> callingFunc(const string &name, const struct TypedList *paramsTypes) {
-  FuncID *funcID = getID<FuncID>(name);
+  shared_ptr<FuncID> funcID = getID<FuncID>(name);
   if (funcID->funcParamsTypes.size() != paramsTypes->list.size()) {
     error("function " + name + " called with wrong number of arguments");
   }
