@@ -18,6 +18,7 @@
   vector<ForStmt*> forv;
   vector<WhileStmt*> whilev;
   vector<IFStmt*> ifv;
+  vector<TypedList*> typedlistv;
 
   template <typename T>
   struct vdel : public unary_function<T*, void> {
@@ -34,6 +35,7 @@
     cerr << "forv size: " << forv.size() << endl;
     cerr << "whilev size: " << whilev.size() << endl;
     cerr << "ifv size: " << ifv.size() << endl;
+    cerr << "typedlistv size: " << typedlistv.size() << endl;
 
     for_each(all(gstmtv), vdel<GStmt>());
     for_each(all(exprv), vdel<ExprStmt>());
@@ -41,6 +43,7 @@
     for_each(all(forv), vdel<ForStmt>());
     for_each(all(whilev), vdel<WhileStmt>());
     for_each(all(ifv), vdel<IFStmt>());
+    for_each(all(typedlistv), vdel<TypedList>());
 
     gstmtv.clear();
     exprv.clear();
@@ -48,7 +51,9 @@
     forv.clear();
     whilev.clear();
     ifv.clear();
+    typedlistv.clear();
   }
+  
 %}
 
 %define api.value.type union
@@ -64,7 +69,7 @@
 %type <struct StrList*> enum_variants
 
 %type <struct GStmt*> stmts stmt code_block function_declaration print_stmt return_stmt
-%type<struct GStmt*> assignment declaration optional_declaration optional_assignment
+%type <struct GStmt*> assignment declaration optional_declaration optional_assignment
 
 %type <struct IFPart*> if_part optional_else_part
 %type <struct IFStmt*> if_stmt
@@ -109,7 +114,7 @@ program:
   ;
 
 stmts:
-   stmts stmt  { string repr = $2->repr(); $$ = $1->append(repr); }
+   stmts stmt { string repr = $2->repr(); $$ = $1->append(repr); }
    | %empty { $$ = new GStmt(""); gstmtv.push_back($$); }
   ;
 
@@ -149,6 +154,7 @@ assignment:
     string repr = $3->repr() + popv($1, id->scope);
     $$ = new GStmt(repr);
     gstmtv.push_back($$);
+    free($1);
   }
   ;
 
@@ -159,15 +165,17 @@ declaration:
       declareID(id);
       $$ = new GStmt("");
       gstmtv.push_back($$);
+      free($2);
     }
   | type IDENTIFIER '=' expr 
     { 
       shared_ptr<VarID> id (new VarID($1, $2));
-      declareID(id);
       id->setExpr($4->getExpr());
+      declareID(id);
       string repr = $4->repr() + popv($2, id->scope);
       $$ = new GStmt(repr);
       gstmtv.push_back($$);
+      free($2);
     }
   | CONST_TYPE type IDENTIFIER '=' expr
     { 
@@ -176,6 +184,7 @@ declaration:
       string repr = $5->repr() + popv($3, id->scope);
       $$ = new GStmt(repr);
       gstmtv.push_back($$);
+      free($3);
     }
   // for enums
   | ENUM_TYPE IDENTIFIER '{' enum_variants '}'
@@ -184,6 +193,7 @@ declaration:
       declareID(eid);
       $$ = new GStmt("");
       gstmtv.push_back($$);
+      free($2);
     }
   | IDENTIFIER IDENTIFIER
     {
@@ -192,15 +202,20 @@ declaration:
       declareID(vid);
       $$ = new GStmt("");
       gstmtv.push_back($$);
+      free($1);
+      free($2);
     }
-  | IDENTIFIER IDENTIFIER '=' expr  // should be EnmStmt(EnumExpr)
+  | IDENTIFIER IDENTIFIER '=' expr
     {
       shared_ptr<EnumID> eid = getID<EnumID>($1);
       shared_ptr<VarID> vid(new VarID($2, eid->name));
       vid->setExpr($4->getExpr());
       declareID(vid);
-      $$ = new GStmt("");
+      string repr = $4->repr() + popv($2, vid->scope);
+      $$ = new GStmt(repr);
       gstmtv.push_back($$);
+      free($1);
+      free($2);
     }
   ;
 
@@ -211,6 +226,7 @@ expr:
       string repr = pushv($1, id->scope);
       $$ = new ExprStmt(id->getExpr(), repr);
       exprv.push_back($$);
+      free($1);
     }
   | INTEGER 
     { 
@@ -239,6 +255,7 @@ expr:
       string repr = push(expr->repr());
       $$ = new ExprStmt(expr, repr);
       exprv.push_back($$);
+      free($1);
     }
 
   | expr_in_parenthsis        { $$ = $1; exprv.push_back($$); }
@@ -249,9 +266,11 @@ expr:
       shared_ptr<EnumID> eid = getID<EnumID>($1);
       int variant = eid->getVariant($3);
       shared_ptr<Expr> expr(new EnumExpr(eid->name, variant));  // ??
-      string repr = push($1);
+      string repr = push(expr->repr());
       $$ = new ExprStmt(expr, repr);
       exprv.push_back($$);
+      free($1);
+      free($3);
     }
 
   // to be able to do something like `print adder(1, 2.2);`
@@ -377,20 +396,20 @@ expr_in_parenthsis:
   ;
 
 enum_variants:
-    enum_variants ',' IDENTIFIER     { $$ = $1->append($3); }
-  | IDENTIFIER                       { $$ = new StrList($1); }
+    enum_variants ',' IDENTIFIER     { $$ = $1->append($3); free($3); }
+  | IDENTIFIER                       { $$ = new StrList($1); free($1); }
   ;
 
 function_declaration:
   type IDENTIFIER { enterFunc($1); } '(' typed_parameter_list ')' 
   code_block 
   { 
+    exitFunc($2); 
     shared_ptr<FuncID> func(new FuncID($1, $2, $5));
     declareID(func);
-    funcHasReturnStatment($2);
     $$ = new GStmt(funcdef($2, current_scope) + $5->repr() + $7->repr());
-    exitFunc(); 
     gstmtv.push_back($$);
+    free($2);
   }
   ;
 
@@ -402,6 +421,7 @@ typed_parameter_list:
       var->setExpr(shared_ptr<Expr>(new Expr()));
       declareID(var);
       $$ = $1->append($3, repr);
+      free($4);
     }
   | type IDENTIFIER
     { 
@@ -410,6 +430,7 @@ typed_parameter_list:
       var->setExpr(shared_ptr<Expr>(new Expr()));
       declareID(var);
       $$ = new TypedList($1, repr);
+      free($2);
     }
   | %empty { $$ = new TypedList(); }
   ;
@@ -420,13 +441,14 @@ function_invokation:
       ExprStmt *estmt = new ExprStmt(callingFunc($1, $3));
       estmt->setRepr($3->repr() + funcall($1));
       $$ = estmt;
+      free($1);
     }
   ;
 
 argument_list:
     argument_list ',' expr  { $$ = $1->append($3->type(), $3->repr()); }
-  | expr                    { $$ = new TypedList($1->type(), $1->repr()); }
-  | %empty                  { $$ = new TypedList(); }
+  | expr                    { $$ = new TypedList($1->type(), $1->repr()); typedlistv.push_back($$); }
+  | %empty                  { $$ = new TypedList(); typedlistv.push_back($$); }
   ;
 
 if_stmt:

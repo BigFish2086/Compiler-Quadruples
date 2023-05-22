@@ -86,23 +86,23 @@ void funcHasReturnStatment(const string &funcName) {
   // TODO: add another return for safty measures
 }
 
-void exitFunc() {
+void exitFunc(const string &funcName) {
+  exitScope();
   auto [type, isReturned] = funcReturnTypesStack.back();
   funcReturnTypesStack.pop_back();
   if (!isReturned) {
-    error("function does not return any value");
+    error("function " + funcName + " does not return any value");
   }
   // TODO: print the needed quads to simulate the return type
-  // exitScope();
 }
 
-shared_ptr<Expr> callingFunc(const string &name, const struct TypedList *paramsTypes) {
+shared_ptr<Expr> callingFunc(const string &name, const TypedList *paramsTypes) {
   shared_ptr<FuncID> funcID = getID<FuncID>(name);
-  if (funcID->funcParamsTypes.size() != paramsTypes->list.size()) {
+  if (funcID->funcParamsTypes->size() != paramsTypes->size()) {
     error("function " + name + " called with wrong number of arguments");
   }
-  for (int i = 0; i < (int)funcID->funcParamsTypes.size(); i++) {
-    if (funcID->funcParamsTypes[i] != paramsTypes->list[i]) {
+  for (int i = 0; i < (int)funcID->funcParamsTypes->size(); i++) {
+    if (funcID->funcParamsTypes->list[i] != paramsTypes->list[i]) {
       error("function " + name + " called with wrong argument type");
     }
   }
