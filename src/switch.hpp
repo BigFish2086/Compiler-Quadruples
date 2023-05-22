@@ -96,7 +96,7 @@ struct SwitchStmt {
       if(caseStmt->expr == nullptr) {
         continue;
       }
-      if (caseStmt->type != this->type) {
+      if (!canCast(this->type, caseStmt->type)) {
         error("switch case type mismatch");
       }
     }

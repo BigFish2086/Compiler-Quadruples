@@ -400,7 +400,7 @@ enum_variants:
   ;
 
 function_declaration:
-  type IDENTIFIER { enterFunc($1); } '(' typed_parameter_list ')' 
+  type IDENTIFIER { enterFunc($1, $2); } '(' typed_parameter_list ')' 
   code_block 
   { 
     exitFunc($2); 
@@ -417,7 +417,7 @@ typed_parameter_list:
     { 
       string repr = popv($4, current_scope);
       shared_ptr<VarID> var(new VarID($3, $4));
-      var->setExpr(shared_ptr<Expr>(new Expr()));
+      var->setExpr(shared_ptr<Expr>(new Expr(type2Default[$3])));
       declareID(var);
       $$ = $1->append($3, repr);
       free($4);
@@ -426,7 +426,7 @@ typed_parameter_list:
     { 
       string repr = popv($2, current_scope);
       shared_ptr<VarID> var(new VarID($1, $2));
-      var->setExpr(shared_ptr<Expr>(new Expr()));
+      var->setExpr(shared_ptr<Expr>(new Expr(type2Default[$1])));
       declareID(var);
       $$ = new TypedList($1, repr);
       free($2);

@@ -87,30 +87,35 @@ void logSymbolTable() {
 }
 
 // ----------------------------------------------------------------------
-vector<pair<yytokentype, bool>> funcReturnTypesStack;
+struct RetData {
+  yytokentype type;
+  bool isReturned;
+  string funcName;
+};
+vector<RetData> funcReturnTypesStack;
 
-void enterFunc(yytokentype type) {
-  funcReturnTypesStack.emplace_back(type, false);
+void enterFunc(yytokentype type, const string &name) {
+  funcReturnTypesStack.emplace_back(type, false, name);
   enterScope();
 }
 
 void validFuncReturnType(shared_ptr<Expr> expr) {
-  yytokentype returnType = funcReturnTypesStack.back().first;
+  auto &[returnType, isReturned, funcName] = funcReturnTypesStack.back();
   if (returnType != expr->type()) {
     if (!canCast(expr->type(), returnType)) {
       error("function return type mismatch since it is " +
             type2Str[returnType] + " but " + type2Str[expr->type()] +
             " is given and cannot be casted");
     } else {
-      warning("function return type casted from " + type2Str[expr->type()] +
+      warning("function " + funcName + " return type casted from " + type2Str[expr->type()] +
               " to " + type2Str[returnType]);
     }
   }
-  funcReturnTypesStack.back().second = true;
+  isReturned = true;
 }
 
 void funcHasReturnStatment(const string &funcName) {
-  auto [type, isReturned] = funcReturnTypesStack.back();
+  auto [type, isReturned, name] = funcReturnTypesStack.back();
   if (!isReturned) {
     error("function " + funcName + " does not return any value");
   }
@@ -119,7 +124,7 @@ void funcHasReturnStatment(const string &funcName) {
 
 void exitFunc(const string &funcName) {
   exitScope();
-  auto [type, isReturned] = funcReturnTypesStack.back();
+  auto [type, isReturned, name] = funcReturnTypesStack.back();
   funcReturnTypesStack.pop_back();
   if (!isReturned) {
     error("function " + funcName + " does not return any value");
