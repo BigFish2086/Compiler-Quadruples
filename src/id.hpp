@@ -119,6 +119,7 @@ struct StrList {
     list.push_back(item);
     return this;
   }
+  int size() const { return list.size(); }
 };
 
 struct TypedList {
@@ -132,40 +133,39 @@ struct TypedList {
     return this;
   }
   string repr() const { return reprsentation; }
+  int size() const { return list.size(); }
 };
 
 class FuncID : public ID {
 public:
-  vector<yytokentype> funcParamsTypes;
+  TypedList *funcParamsTypes;
 
-  FuncID(yytokentype _type, const string &_name,
-         vector<yytokentype> _paramsTypes)
+  FuncID(yytokentype _type, const string &_name, TypedList *_paramsTypes)
       : ID(_type, _name) {
     this->funcParamsTypes = _paramsTypes;
   }
-  FuncID(yytokentype _type, const string &_name, TypedList *_paramsTypes)
-      : ID(_type, _name) {
-    this->funcParamsTypes = _paramsTypes->list;
+  ~FuncID() {
+    delete this->funcParamsTypes;
+    this->funcParamsTypes = nullptr;
   }
-  ~FuncID() {}
 };
 
 // ----------------------------------------------------------------------
 class EnumID : public ID {
 public:
-  vector<string> enumVariants; // TODO: change to set
+  StrList *enumVariants;
 
-  EnumID(string _name, vector<string> _variants) : ID(ENUM_TYPE, _name) {
+  EnumID(string _name, StrList *_variants) : ID(ENUM_TYPE, _name) {
     this->enumVariants = _variants;
   }
-  EnumID(string _name, StrList *_variants) : ID(ENUM_TYPE, _name) {
-    this->enumVariants = _variants->list;
+  ~EnumID() {
+    delete this->enumVariants;
+    this->enumVariants = nullptr;
   }
-  ~EnumID() {}
 
   int getVariant(const string &variant) {
-    for (int i = 0; i < (int)this->enumVariants.size(); i++) {
-      if (this->enumVariants[i] == variant) {
+    for (int i = 0; i < (int)this->enumVariants->size(); i++) {
+      if (this->enumVariants->list[i] == variant) {
         return i;
       }
     }
