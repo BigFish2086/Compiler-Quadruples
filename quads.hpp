@@ -6,8 +6,8 @@
 #define warning(msg) std::cerr << "warning: " << msg << std::endl
 
 #define syntax_error_msg                                                          \
-  error("syntax error #" + std::to_string(++syntax_errors) +                   \
-        " near: " + yytext + " in line #" + std::to_string(yylineno))
+  cerr << "syntax error #" + std::to_string(++syntax_errors) +                   \
+        " near: " + yytext + " in line #" + std::to_string(yylineno)
 
 using std::string;
 

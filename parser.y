@@ -50,7 +50,6 @@
     symlog.open(fout + ".log");
     outputFile.close();
     outputFile.open(fout + ".q");
-    exit(1);
   }
   
 %}
@@ -251,7 +250,7 @@ expr:
   | STRING
     {
       shared_ptr<Expr> expr(new Expr(Value($1)));
-      string repr = push(expr->repr());
+      string repr = pushs(expr->repr());
       $$ = new ExprStmt(expr, repr);
       exprv.push_back($$);
       free($1);
