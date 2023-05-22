@@ -21,22 +21,13 @@
   vector<TypedList*> typedlistv;
 
   template <typename T>
-  struct vdel : public unary_function<T*, void> {
+  struct vdel {
     void operator()(T* ptr) const {
       delete ptr;
     }
   };
 
   void cleanup() {
-    cerr << "cleaning up" << endl;
-    cerr << "gstmtv size: " << gstmtv.size() << endl;
-    cerr << "exprv size: " << exprv.size() << endl;
-    cerr << "switchv size: " << switchv.size() << endl;
-    cerr << "forv size: " << forv.size() << endl;
-    cerr << "whilev size: " << whilev.size() << endl;
-    cerr << "ifv size: " << ifv.size() << endl;
-    cerr << "typedlistv size: " << typedlistv.size() << endl;
-
     for_each(all(gstmtv), vdel<GStmt>());
     for_each(all(exprv), vdel<ExprStmt>());
     for_each(all(switchv), vdel<SwitchStmt>());
@@ -52,6 +43,14 @@
     whilev.clear();
     ifv.clear();
     typedlistv.clear();
+  }
+
+  void abort() {
+    symlog.close();
+    symlog.open(fout + ".log");
+    outputFile.close();
+    outputFile.open(fout + ".q");
+    exit(1);
   }
   
 %}
@@ -114,7 +113,7 @@ program:
   ;
 
 stmts:
-   stmts stmt { string repr = $2->repr(); $$ = $1->append(repr); }
+   stmts stmt { string repr = $2->repr(); $$ = $1->append(repr);  logSymbolTable(); }
    | %empty { $$ = new GStmt(""); gstmtv.push_back($$); }
   ;
 
@@ -541,6 +540,7 @@ int main(int argc, char** argv) {
   fout = argv[1];
   outputFile.open(fout + ".q");
   outputFile << fixed << setprecision(5);
+  symlog.open(fout + ".log");
 
   // Handle syntax errors.
   if (yyparse()) syntax_error_msg;

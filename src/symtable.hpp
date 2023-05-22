@@ -55,6 +55,19 @@ void declareID(shared_ptr<ID> id) {
   symbolTable[current_scope][id->name] = id;
 }
 
+void logSymbolTable() {
+  string line(90, '-');
+  string info = "N: Name L# Line S@ Scope U: Used T: Type [I: isInit] [C: isConst]";
+  symlog << line << '\n' << info << '\n' << line << "\n\n";
+  for (int i = 0; i < (int)symbolTable.size(); i++) {
+    for (auto it : symbolTable[i]) {
+      symlog << it.second << '\n';
+    }
+  }
+  symlog << "\n\n";
+}
+
+
 // ----------------------------------------------------------------------
 vector<pair<yytokentype, bool>> funcReturnTypesStack;
 
@@ -102,7 +115,7 @@ shared_ptr<Expr> callingFunc(const string &name, const TypedList *paramsTypes) {
     error("function " + name + " called with wrong number of arguments");
   }
   for (int i = 0; i < (int)funcID->funcParamsTypes->size(); i++) {
-    if (funcID->funcParamsTypes->list[i] != paramsTypes->list[i]) {
+    if (!canCast(funcID->funcParamsTypes->list[i], paramsTypes->list[i])) {
       error("function " + name + " called with wrong argument type");
     }
   }

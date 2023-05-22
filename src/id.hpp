@@ -20,9 +20,14 @@ public:
   }
   virtual ~ID() {}
 
-  friend ostream &operator<<(ostream &os, const ID *id) {
-    os << "N: " << id->name << " L# " << id->line << " Scp@ " << id->scope
-       << " U: " << id->isUsed << " ";
+  virtual string str() const {
+    return "N: " + this->name + " L# " + to_string(this->line) + " S@ " +
+           to_string(this->scope) + " U: " + to_string(this->isUsed) +
+           " T: " + type2Str[this->type];
+  }
+
+  friend ostream &operator<<(ostream &os, shared_ptr<ID> id) {
+    os << id->str();
     return os;
   }
 };
@@ -67,6 +72,20 @@ public:
 
   ~VarID() {}
 
+  string str() const override {
+    string parent = ID::str();
+    string me = parent + " I: " + to_string(this->isInitialized) +
+           " C: " + to_string(this->isConst);
+
+    if(this->expr != nullptr) {
+      me += " Expr: " + this->expr->repr();
+    }
+    if (this->isEnum) {
+      me += " EnumType: " + this->enumName;
+    } 
+    return me;
+  }
+  
   // TODO: call doCast() when needed
   // checks are:
   // 1. if the variable is const, then it cannot be assigned again
@@ -111,17 +130,6 @@ private:
 };
 
 // ----------------------------------------------------------------------
-struct StrList {
-  vector<string> list;
-  StrList() {}
-  StrList(string item) { this->append(item); }
-  StrList *append(string item) {
-    list.push_back(item);
-    return this;
-  }
-  int size() const { return list.size(); }
-};
-
 struct TypedList {
   vector<yytokentype> list;
   string reprsentation = "";
@@ -148,9 +156,26 @@ public:
     delete this->funcParamsTypes;
     this->funcParamsTypes = nullptr;
   }
+
+  string str() const override {
+    string parent = ID::str();
+    string me = parent + " @FuncID";
+    return me;
+  }
 };
 
 // ----------------------------------------------------------------------
+struct StrList {
+  vector<string> list;
+  StrList() {}
+  StrList(string item) { this->append(item); }
+  StrList *append(string item) {
+    list.push_back(item);
+    return this;
+  }
+  int size() const { return list.size(); }
+};
+
 class EnumID : public ID {
 public:
   StrList *enumVariants;
@@ -171,5 +196,11 @@ public:
     }
     error("enum " + this->name + " has no variant " + variant);
     return -1;
+  }
+
+  string str() const override {
+    string parent = ID::str();
+    string me = parent + " @EnumID";
+    return me;
   }
 };
