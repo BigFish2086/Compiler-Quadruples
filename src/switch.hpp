@@ -4,13 +4,13 @@
 #include "globals.hpp"
 
 struct CaseStmt {
-  Expr *expr;
+  shared_ptr<Expr> expr;
   int scope, line;
   yytokentype type;
   string body;
 
   // CASE
-  CaseStmt(Expr *_expr, const string &_body) {
+  CaseStmt(shared_ptr<Expr> _expr, const string &_body) {
     this->expr = _expr;
     this->type = _expr->type();
     this->scope = current_scope;
@@ -27,11 +27,7 @@ struct CaseStmt {
     this->body = _body;
   }
 
-  ~CaseStmt() { 
-    if(expr != nullptr) {
-      delete expr;
-    }
-  }
+  ~CaseStmt() {}
 
   string repr(const string &curLabel, const string &nextLabel,
               const string &retLabel) {
@@ -59,16 +55,23 @@ struct CaseStmtList {
     return this;
   }
   int size() { return list.size(); }
+  ~CaseStmtList() {
+    for (auto item : list) {
+      delete item;
+      item = 0;
+    }
+    this->list.clear();
+  }
 };
 
 struct SwitchStmt {
-  Expr *expr;
+  shared_ptr<Expr> expr;
   int scope, line;
   yytokentype type;
   string returnLabel;
-  CaseStmtList *caseStmtList;
+  CaseStmtList *caseStmtList = nullptr;
 
-  SwitchStmt(Expr *_expr, CaseStmtList *_caseStmtList) {
+  SwitchStmt(shared_ptr<Expr> _expr, CaseStmtList *_caseStmtList) {
     this->expr = _expr;
     this->type = _expr->type();
     this->scope = current_scope;
@@ -80,12 +83,8 @@ struct SwitchStmt {
   }
 
   ~SwitchStmt() {
-    if(expr != nullptr) {
-      delete expr;
-    }
-    if(caseStmtList != nullptr) {
-      delete caseStmtList;
-    }
+    delete caseStmtList;
+    caseStmtList = 0;
   }
 
   void check(CaseStmtList *_caseStmtList) {

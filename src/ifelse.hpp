@@ -4,13 +4,13 @@
 #include "globals.hpp"
 
 struct IFPart {
-  Expr *expr;
+  shared_ptr<Expr> expr;
   int scope, line;
   yytokentype type;
   string body;
 
   // IF
-  IFPart(Expr *_expr, const string &_body) {
+  IFPart(shared_ptr<Expr> _expr, const string &_body) {
     this->check(_expr);
     this->expr = _expr;
     this->type = _expr->type();
@@ -28,13 +28,9 @@ struct IFPart {
     this->body = _body;
   }
 
-  ~IFPart() { 
-    if (expr != nullptr) {
-      delete expr;
-    }
-  }
+  ~IFPart() {}
 
-  void check(Expr *_expr) {
+  void check(shared_ptr<Expr> _expr) {
     if (!canCast(_expr->type(), yytokentype::BOOL)) {
       error("if condition must be boolean");
     }
@@ -66,11 +62,18 @@ struct IFPartList {
     return this;
   }
   int size() { return list.size(); }
+  ~IFPartList() {
+    for (auto item : list) {
+      delete item;
+      item = 0;
+    }
+    this->list.clear();
+  }
 };
 
 struct IFStmt {
-  IFPartList *ifPartList;
-  IFPart *elsePart;
+  IFPartList *ifPartList = nullptr;
+  IFPart *elsePart = nullptr;
   int scope, line;
   string returnLabel;
 
@@ -80,6 +83,14 @@ struct IFStmt {
     this->line = yylineno;
     int iret = scopeLabels[this->scope] + _ifPartList->size() + 1;
     this->returnLabel = buildLable(this->scope, iret);
+  }
+
+  ~IFStmt() {
+    delete ifPartList;
+    ifPartList = 0;
+
+    delete elsePart;
+    elsePart = 0;
   }
 
   string repr() {

@@ -5,19 +5,15 @@
 
 struct ForStmt {
   int scope, line;
-  Expr *expr;
+  shared_ptr<Expr> expr;
   string optioanl_assign_body;
   string condition_body;
   string optional_increment_body;
   string code_block_body;
 
-  ForStmt(
-    const string &_optioanl_assign_body,
-    const string &_condition_body,
-    const string &_optional_increment_body,
-    const string &_code_block_body,
-    Expr *_expr
-  ) {
+  ForStmt(const string &_optioanl_assign_body, const string &_condition_body,
+          const string &_optional_increment_body,
+          const string &_code_block_body, shared_ptr<Expr> _expr) {
 
     this->check(_expr);
     this->expr = _expr;
@@ -31,9 +27,9 @@ struct ForStmt {
     this->line = yylineno;
   }
 
-  ~ForStmt() { delete this->expr; }
+  ~ForStmt() {}
 
-  void check(Expr *_expr) {
+  void check(shared_ptr<Expr> _expr) {
     if (!canCast(_expr->type(), yytokentype::BOOL)) {
       error("for condition must be boolean");
     }

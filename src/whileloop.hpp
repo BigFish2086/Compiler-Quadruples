@@ -5,14 +5,14 @@
 
 struct WhileStmt {
   int scope, line;
-  Expr *expr;
+  shared_ptr<Expr> expr;
   string condition_body;
   string code_block_body;
 
   WhileStmt(
     const string &_condition_body,
     const string &_code_block_body,
-    Expr *_expr
+    shared_ptr<Expr> _expr
   ) {
     this->check(_expr);
     this->expr = _expr;
@@ -22,13 +22,9 @@ struct WhileStmt {
     this->scope = current_scope;
     this->line = yylineno;
   }
-  ~WhileStmt() {
-    if (expr != nullptr) {
-      delete expr;
-    }
-  }
+  ~WhileStmt() {}
 
-  void check(Expr *_expr) {
+  void check(shared_ptr<Expr> _expr) {
     if (!canCast(_expr->type(), yytokentype::BOOL)) {
       error("while condition must be boolean");
     }

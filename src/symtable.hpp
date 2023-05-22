@@ -15,9 +15,14 @@ void exitScope() {
   map<string, ID *> scope = symbolTable[current_scope];
   for (auto it : scope) {
     ID *id = it.second;
-    if (!id->isUsed) {
-      cout << "Warning: ID " << id->name << " declared but not used" << endl;
+    if(id == nullptr) {
+      continue;
     }
+    if (!id->isUsed) {
+      warning("ID " + id->name + " is not used");
+    }
+    delete id;
+    id = 0;
   }
   symbolTable.pop_back();
   current_scope--;
@@ -58,33 +63,27 @@ void enterFunc(yytokentype type) {
   enterScope();
 }
 
-void funcHasReturnStatment(const string &funcName) {
-  auto [type, isReturned] = funcReturnTypesStack.back();
-  if (isReturned) {
-    error("function " + funcName + " has more than one return statement");
-  }
-  // TODO: add another return for safty measures
-}
-
-void validFuncReturnType(Expr *expr) {
+void validFuncReturnType(shared_ptr<Expr> expr) {
   yytokentype returnType = funcReturnTypesStack.back().first;
   if (returnType != expr->type()) {
-    error("function return type mismatch");
+    if (!canCast(expr->type(), returnType)) {
+      error("function return type mismatch since it is " +
+            type2Str[returnType] + " but " + type2Str[expr->type()] +
+            " is given and cannot be casted");
+    } else {
+      warning("function return type casted from " + type2Str[expr->type()] +
+              " to " + type2Str[returnType]);
+    }
   }
   funcReturnTypesStack.back().second = true;
 }
 
-Expr *callingFunc(const string &name, const struct TypedList *paramsTypes) {
-  FuncID *funcID = getID<FuncID>(name);
-  if (funcID->funcParamsTypes.size() != paramsTypes->list.size()) {
-    error("function " + name + " called with wrong number of arguments");
+void funcHasReturnStatment(const string &funcName) {
+  auto [type, isReturned] = funcReturnTypesStack.back();
+  if (!isReturned) {
+    error("function " + funcName + " does not return any value");
   }
-  for (int i = 0; i < (int)funcID->funcParamsTypes.size(); i++) {
-    if (funcID->funcParamsTypes[i] != paramsTypes->list[i]) {
-      error("function " + name + " called with wrong argument type");
-    }
-  }
-  return new Expr(funcID->type);
+  // TODO: add another return for safty measures
 }
 
 void exitFunc() {
@@ -96,3 +95,17 @@ void exitFunc() {
   // TODO: print the needed quads to simulate the return type
   // exitScope();
 }
+
+shared_ptr<Expr> callingFunc(const string &name, const struct TypedList *paramsTypes) {
+  FuncID *funcID = getID<FuncID>(name);
+  if (funcID->funcParamsTypes.size() != paramsTypes->list.size()) {
+    error("function " + name + " called with wrong number of arguments");
+  }
+  for (int i = 0; i < (int)funcID->funcParamsTypes.size(); i++) {
+    if (funcID->funcParamsTypes[i] != paramsTypes->list[i]) {
+      error("function " + name + " called with wrong argument type");
+    }
+  }
+  return shared_ptr<Expr>(new Expr(funcID->type));
+}
+

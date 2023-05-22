@@ -9,6 +9,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <memory>
 #include <unordered_set>
 
 #include "../parser.tab.h"
@@ -48,6 +49,15 @@ map<int, string> type2Str = {
   {STRING,    "STRING"},
   {ENUM_TYPE, "ENUM_TYPE"}
 };
+
+// map types to default values
+// map<int, Value> type2Default = {
+//   {INTEGER,   0},
+//   {FLOAT,     0.0},
+//   {BOOL,      false},
+//   {STRING,    ""},
+//   {ENUM_TYPE, 0}
+// };
 
 bool canCast(const int &from, const int &to) {
   if (from == to) {

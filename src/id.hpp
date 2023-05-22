@@ -30,7 +30,7 @@ public:
 // ----------------------------------------------------------------------
 class VarID : public ID {
 public:
-  Expr *expr;
+  shared_ptr<Expr> expr;
   bool isConst = false;
   bool isInitialized = false;
 
@@ -38,26 +38,26 @@ public:
   string enumName = ""; // if the variable is an enumVariant
 
   // for variables
-  VarID(yytokentype _type, const string &_name, bool isInit=false) : ID(_type, _name) {
+  VarID(yytokentype _type, const string &_name, bool isInit = false)
+      : ID(_type, _name) {
     this->isInitialized = isInit;
   }
 
   // for const variables
-  VarID(yytokentype _type, const string &_name, Expr *_expr)
+  VarID(yytokentype _type, const string &_name, shared_ptr<Expr> _expr)
       : ID(_type, _name) {
     this->__setExpr(_expr);
     this->isConst = true;
   }
 
   // for enum variants
-  VarID(const string &_name, const string &_enumName)
-      : ID(ENUM_TYPE, _name) {
+  VarID(const string &_name, const string &_enumName) : ID(ENUM_TYPE, _name) {
     this->isEnum = true;
     this->enumName = _enumName;
   }
 
   // for const enum variants
-  VarID(const string &_name, const string &_enumName, Expr *_expr)
+  VarID(const string &_name, const string &_enumName, shared_ptr<Expr> _expr)
       : ID(ENUM_TYPE, _name) {
     this->isEnum = true;
     this->enumName = _enumName;
@@ -65,23 +65,20 @@ public:
     this->isConst = true;
   }
 
-  ~VarID() {
-    if (expr != nullptr) {
-      delete expr;
-    }
-  }
+  ~VarID() {}
+
   // TODO: call doCast() when needed
   // checks are:
   // 1. if the variable is const, then it cannot be assigned again
   // 2. type of the variable and the expression must match or be convertible
-  void setExpr(Expr *_expr) {
+  void setExpr(shared_ptr<Expr> _expr) {
     if (this->isConst) {
       error("cannot assign to const variable " + this->name);
     }
     this->__setExpr(_expr);
   }
 
-  Expr *getExpr() {
+  shared_ptr<Expr> getExpr() {
     if (!this->isInitialized) {
       error("variable " + this->name + " is not initialized");
     }
@@ -89,7 +86,7 @@ public:
   }
 
 private:
-  void __setExpr(Expr *_expr) {
+  void __setExpr(shared_ptr<Expr> _expr) {
     if (!canCast(this->type, _expr->type())) {
       error("cannot assign Variable " + this->name + " of type " +
             type2Str[this->type] + " to expression of type " +
@@ -97,7 +94,7 @@ private:
     }
 
     if (this->isEnum) {
-      EnumExpr *enumExpr = dynamic_cast<EnumExpr *>(_expr);
+      EnumExpr *enumExpr = dynamic_cast<EnumExpr *>(_expr.get());
       if (enumExpr == nullptr) {
         error("cannot assign non-enum expression to enum variable " +
               this->name);
@@ -175,17 +172,4 @@ public:
     error("enum " + this->name + " has no variant " + variant);
     return -1;
   }
-};
-
-// ----------------------------------------------------------------------
-struct IDStmt {
-  ID *id;
-  string reprsentation;
-  IDStmt(ID *_id) : id(_id) {}
-  IDStmt(ID *_id, const string &str) : id(_id), reprsentation(str) {}
-  ~IDStmt() { delete id; }
-
-  void setRepr(const string &str) { reprsentation = str; }
-  string repr() const { return reprsentation; }
-  ID *getID() const { return id; }
 };

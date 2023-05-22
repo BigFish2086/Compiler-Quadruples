@@ -17,52 +17,48 @@ struct Expr {
   // overload type operator
   yytokentype type() const { return std::visit(type_op(), value); }
 
-  // overload assignment operator
-  Expr &operator=(const Expr *other) {
-    value = other->value;
-    isConst = other->isConst;
-    return *this;
-  }
-
   // overload arithmatic operators
-  Expr *operator-() const {
-    return new Expr(std::visit(multplier(), value, Value(-1)), isConst);
+  shared_ptr<Expr> operator-() const {
+    return make_shared<Expr>(std::visit(multplier(), value, Value(-1)),
+                             isConst);
   }
-  Expr *operator+(const Expr *other) const {
-    return new Expr(std::visit(adder(), value, other->value),
-                    this->constResult(other));
+  shared_ptr<Expr> operator+(shared_ptr<Expr> other) const {
+    return make_shared<Expr>(std::visit(adder(), value, other->value),
+                             this->constResult(other.get()));
   }
-  Expr *operator-(const Expr *other) const {
-    return new Expr(std::visit(subtractor(), value, other->value),
-                    this->constResult(other));
+  shared_ptr<Expr> operator-(shared_ptr<Expr> other) const {
+    return make_shared<Expr>(std::visit(subtractor(), value, other->value),
+                             this->constResult(other.get()));
   }
-  Expr *operator*(const Expr *other) const {
-    return new Expr(std::visit(multplier(), value, other->value),
-                    this->constResult(other));
+  shared_ptr<Expr> operator*(shared_ptr<Expr> other) const {
+    return make_shared<Expr>(std::visit(multplier(), value, other->value),
+                             this->constResult(other.get()));
   }
-  Expr *operator/(const Expr *other) const {
-    return new Expr(std::visit(divider(), value, other->value),
-                    this->constResult(other));
+  shared_ptr<Expr> operator/(shared_ptr<Expr> other) const {
+    return make_shared<Expr>(std::visit(divider(), value, other->value),
+                             this->constResult(other.get()));
   }
 
   // overload comparison operators
-  bool operator==(const Expr *other) const {
+  bool operator==(shared_ptr<Expr> other) const {
     return std::visit(equlizer(), value, other->value);
   }
-  bool operator!=(const Expr *other) const { return !(*this == other); }
-  bool operator<(const Expr *other) const {
+  bool operator!=(shared_ptr<Expr> other) const { return !(*this == other); }
+  bool operator<(shared_ptr<Expr> other) const {
     return std::visit(less_than(), value, other->value);
   }
-  bool operator>(const Expr *other) const { return other < this; }
-  bool operator<=(const Expr *other) const { return !(*this > other); }
-  bool operator>=(const Expr *other) const { return !(*this < other); }
+  bool operator>(shared_ptr<Expr> other) const { 
+    return std::visit(greater_than(), value, other->value);
+  }
+  bool operator<=(shared_ptr<Expr> other) const { return !(*this > other); }
+  bool operator>=(shared_ptr<Expr> other) const { return !(*this < other); }
 
   // overload logical operators
   bool operator!() const { return std::visit(log_not(), value); }
-  bool operator&&(const Expr *other) const {
+  bool operator&&(shared_ptr<Expr> other) const {
     return std::visit(log_and(), value, other->value);
   }
-  bool operator||(const Expr *other) const { return !(!(*this) && !other); }
+  bool operator||(shared_ptr<Expr> other) const { return !(!(*this) && !other); }
 
   // overload stream operator
   friend ostream &operator<<(ostream &os, const Expr *expr) {
@@ -73,23 +69,23 @@ struct Expr {
   string repr() const { return std::visit(repr_op(), value); }
 };
 
-struct EnumExpr : public Expr{
+struct EnumExpr : public Expr {
   string enumName;
 
   EnumExpr(const string &_enumName, int v) : Expr(v), enumName(_enumName) {}
-
 };
 
 struct ExprStmt {
-  Expr *expr;
+  shared_ptr<Expr> expr;
   string reprsentation;
-  ExprStmt(Expr *e) : expr(e) {}
-  ExprStmt(Expr *e, const string &str) : expr(e), reprsentation(str) {}
-  ~ExprStmt() { delete expr; }
+  ExprStmt(shared_ptr<Expr> e) : expr(e) {}
+  ExprStmt(shared_ptr<Expr> e, const string &str)
+      : expr(e), reprsentation(str) {}
+  ~ExprStmt() {}
 
   void setRepr(const string &str) { reprsentation = str; }
   string repr() const { return reprsentation; }
 
-  Expr *getExpr() const { return expr; }
+  shared_ptr<Expr> getExpr() const { return expr; }
   yytokentype type() const { return expr->type(); }
 };

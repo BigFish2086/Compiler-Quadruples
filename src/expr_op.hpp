@@ -1,6 +1,9 @@
 #pragma once
 #include "globals.hpp"
 
+template <typename T>
+concept Arithmetic = std::is_arithmetic_v<T>;
+
 struct adder {
   Value operator()(const int &a, const int &b) const { return a + b; }
   Value operator()(const int &a, const float &b) const { return a + b; }
@@ -44,33 +47,42 @@ struct divider {
 // ----------------------------------------------------------------------
 // note: equal can work for == and !=
 struct equlizer {
-  template <typename T, typename U,
-            enable_if_t<is_arithmetic_v<T> && is_arithmetic_v<U>>>
+  template <Arithmetic T, Arithmetic U>
   bool operator()(const T &a, const U &b) const {
     return a == b;
   }
-
   bool operator()(const std::string &a, const std::string &b) const {
     return a == b;
   }
-
-  bool operator()(auto a, auto b) const { error("invalid types for equal"); }
+  bool operator()(const auto &a,const auto &b) const {
+    error("invalid types for equal");
+  }
 };
 
 // note: can work for <, >, <=, >=
 struct less_than {
-  template <typename T, typename U,
-            enable_if_t<is_arithmetic_v<T> && is_arithmetic_v<U>>>
+  template <Arithmetic T, Arithmetic U>
   bool operator()(const T &a, const U &b) const {
     return a < b;
   }
-
   bool operator()(const std::string &a, const std::string &b) const {
     return a < b;
   }
-
-  bool operator()(auto a, auto b) const {
+  bool operator()(const auto &a,const auto &b) const {
     error("invalid types for less than");
+  }
+};
+
+struct greater_than {
+  template <Arithmetic T, Arithmetic U>
+  bool operator()(const T &a, const U &b) const {
+    return a > b;
+  }
+  bool operator()(const std::string &a, const std::string &b) const {
+    return a > b;
+  }
+  bool operator()(const auto &a,const auto &b) const {
+    error("invalid types for greater than");
   }
 };
 
@@ -102,8 +114,7 @@ struct type_op {
 };
 
 struct repr_op {
-  template <typename T, std::enable_if_t<std::is_arithmetic_v<T>> * = nullptr>
-  std::string operator()(const T &t) const {
+  template <Arithmetic T> std::string operator()(const T &t) const {
     return std::to_string(t);
   }
   std::string operator()(const std::string &t) const { return t; }
