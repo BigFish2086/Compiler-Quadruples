@@ -31,9 +31,9 @@ struct ForStmt {
 
   void check(shared_ptr<Expr> _expr) {
     if (!canCast(_expr->type(), yytokentype::BOOL)) {
-      error("for condition must be boolean");
+      error("for condition must be of type convertable to boolean");
     }
-    if (_expr->isConst) {
+    if (_expr->type() == yytokentype::BOOL) {
       string cond = std::get<bool>(_expr->value) ? "true" : "false";
       warning("for condition is always " + cond);
     }

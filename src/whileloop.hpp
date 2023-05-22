@@ -26,9 +26,9 @@ struct WhileStmt {
 
   void check(shared_ptr<Expr> _expr) {
     if (!canCast(_expr->type(), yytokentype::BOOL)) {
-      error("while condition must be boolean");
+      error("while condition must be type convertable to boolean");
     }
-    if (_expr->isConst) {
+    if (_expr->type() == yytokentype::BOOL) {
       string cond = std::get<bool>(_expr->value) ? "true" : "false";
       warning("while condition is always " + cond);
     }
