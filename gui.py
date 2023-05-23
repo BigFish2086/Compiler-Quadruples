@@ -3,6 +3,8 @@ from tkinter import ttk
 import tkinter.scrolledtext as scrolledtext
 from tkinter.filedialog import askopenfilename
 import re
+from os import path
+from subprocess import Popen, PIPE
 
 # ====================================================================================================
 def search_re(pattern, text, groupid=0):
@@ -30,16 +32,39 @@ font = 'Consolas 10'
 
 # Define a list of Regex Pattern that should be colored in a certain way
 repl = [
-    ['(^| )(const|int|flt|bool|string|return|for|while|if|else|repeat|until|enum|true|false|switch|case|default)($| )', keywords],
+    ['(^| )(const|int|flt|bool|str|return|enum|true|false)($| )', keywords],
     ['".*?"', string],
     ['\'.*?\'', string],
     ['//.*?$', comments],
-    ['print', function],
+    ['print|for|while|if|else|repeat|until|switch|case|default', function],
 ]
 
-# ====================================================================================================
 codeText = ""
-# Event Handler for Coda Area
+quadText = ""
+symbolTableText = ""
+consoleText = ""
+
+isCompiled = False
+compilerPath = "./bin/compiler"
+filesdir = "./files/"
+codeFile = filesdir + "code.in"
+quadFile = filesdir + "quads.out"
+symbolTableFile = filesdir + "symboltable.log"
+
+def buildCompiler():
+    global compilerPath, consoleText, isCompiled
+    isCompiled = True
+    proc = Popen(["make", "build"], stdout=PIPE, stderr=PIPE)
+    output, error = proc.communicate()
+    compilerPath = "bin/compiler"
+    if path.isfile(compilerPath):
+        consoleText = "Compiler built successfully"
+    else:
+        consoleText = "Error building compiler"
+    consoleText += "\n\n" + output.decode("utf-8") + "\n\n" + error.decode("utf-8")
+
+
+# ====================================================================================================
 def changes(event=None):
     global codeText
     if editArea.get('1.0', END) == codeText:
@@ -54,6 +79,53 @@ def changes(event=None):
             i+=1
     codeText = editArea.get('1.0', END) 
 
+def compile(event=None):
+    global codeText, quadText, symbolTableText, consoleText, compilerPath, isCompiled
+    with open(codeFile, "w") as file:
+        file.write(editArea.get('1.0', END))
+    # check if compiler binary is there in bin folder
+    if path.isfile(compilerPath):
+        proc = Popen([compilerPath, codeFile], stdout=PIPE, stderr=PIPE)
+        output, error = proc.communicate()
+        res = output.decode("utf-8") + "\n\n" + error.decode("utf-8")
+        consoleText = "" if not isCompiled else consoleText
+        consoleText += res
+        with open(quadFile, "r") as file:
+            quadText = file.read()
+        with open(symbolTableFile, "r") as file:
+            symbolTableText = file.read()
+
+        quadArea.config(state=NORMAL)
+        quadArea.delete('1.0', END)
+        quadArea.insert('1.0', quadText)
+        quadArea.config(state=DISABLED)
+
+        symbolTable.config(state=NORMAL)
+        symbolTable.delete('1.0', END)
+        symbolTable.insert('1.0', symbolTableText)
+        symbolTable.config(state=DISABLED)
+
+        console.config(state=NORMAL)
+        console.delete('1.0', END)
+        console.insert('1.0', consoleText)
+        console.config(state=DISABLED)
+
+    # otherwise compile the compiler and then compile the code
+    else:
+        buildCompiler()
+        compile()
+        isCompiled = False
+
+def selectFile(event=None):
+    file_name = askopenfilename(initialdir=".", title="Select file", filetypes=(("all files", "*.*"), ("text files", "*.txt")))
+    if not file_name:
+        return
+    with open(file_name, "r") as file:
+        global code_area
+        editArea.delete("1.0", END)
+        editArea.insert("1.0", file.read())
+        changes()
+
 
 # ====================================================================================================
 # Setup Tkinter
@@ -67,6 +139,7 @@ root.option_add("*tearOff", False)
 # Create a custom Style object with a background color
 style = ttk.Style()
 style.configure("Custom.TNotebook", background=background)
+style.configure("Custom.TNotebook.Tab", background="green3")
 
 notebook = ttk.Notebook(root, style="Custom.TNotebook", padding=(10, 10, 10, 10))
 tab_1 = ttk.Frame(notebook)
@@ -94,6 +167,8 @@ editArea.insert('1.0',
 // <Ctrl+i> to load a file
 """)
 editArea.bind('<KeyRelease>', changes)
+editArea.bind('<Control-c>', compile)
+editArea.bind('<Control-i>', selectFile)
 
 # ====================================================================================================
 tab_2 = ttk.Frame(notebook)
