@@ -491,7 +491,7 @@ if_stmt:
   ;
 
 if_part:
-    IF expr_in_parenthsis code_block { $$ = new IFPart($2->getExpr(), $3->repr()); }
+    IF expr_in_parenthsis code_block { $$ = new IFPart($2->getExpr(), $2->repr(), $3->repr()); }
   ;
 
 optional_else_part:

@@ -7,16 +7,21 @@ struct IFPart {
   shared_ptr<Expr> expr;
   int scope, line;
   yytokentype type;
-  string body;
+  string condition_body;
+  string code_block_body;
 
-  // IF
-  IFPart(shared_ptr<Expr> _expr, const string &_body) {
+  IFPart(
+    shared_ptr<Expr> _expr,
+    const string &_condition_body,
+    const string &_code_block_body
+  ) {
     this->check(_expr);
     this->expr = _expr;
     this->type = _expr->type();
     this->scope = current_scope;
     this->line = yylineno;
-    this->body = _body;
+    this->condition_body = _condition_body;
+    this->code_block_body = _code_block_body;
   }
 
   // ELSE
@@ -25,7 +30,8 @@ struct IFPart {
     this->type = yytokentype::INTEGER;
     this->scope = current_scope;
     this->line = yylineno;
-    this->body = _body;
+    this->condition_body = "";
+    this->code_block_body = _body;
   }
 
   ~IFPart() {}
@@ -45,9 +51,10 @@ struct IFPart {
     string res = "";
     res += label(curLabel);
     if (expr != nullptr) {
+      res += this->condition_body;
       res += jz(nextLabel);
     }
-    res += body;
+    res += this->code_block_body;
     res += jmp(retLabel);
     return res;
   }
