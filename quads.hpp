@@ -7,7 +7,7 @@
 
 #define syntax_error_msg                                                          \
   cerr << "syntax error #" + std::to_string(++syntax_errors) +                   \
-        " near: " + yytext + " in line #" + std::to_string(yylineno)
+        " near: " + yytext + " in line #" + std::to_string(yylineno) + "\n";
 
 using std::string;
 

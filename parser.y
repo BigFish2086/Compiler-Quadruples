@@ -53,9 +53,7 @@
 
   void closeFiles() {
     symlog.close();
-    symlog.open(fout + ".log");
     outputFile.close();
-    outputFile.open(fout + ".q");
   }
   
 %}
@@ -153,8 +151,7 @@ code_block:
 assignment:
   IDENTIFIER '=' expr 
   { 
-    string name($1);
-    free($1);
+    string name = cleanStr($1);
     shared_ptr<VarID> id = getID<VarID>(name);
     id->setExpr($3->getExpr());
     string repr = $3->repr() + popv(name, id->scope);
@@ -166,8 +163,7 @@ assignment:
 declaration:
     type IDENTIFIER 
     { 
-      string name($2);
-      free($2);
+      string name = cleanStr($2);
       shared_ptr<VarID> id (new VarID($1, name));
       declareID(id);
       $$ = new GStmt("");
@@ -175,8 +171,7 @@ declaration:
     }
   | type IDENTIFIER '=' expr 
     { 
-      string name($2);
-      free($2);
+      string name = cleanStr($2);
       shared_ptr<VarID> id (new VarID($1, name));
       id->setExpr($4->getExpr());
       declareID(id);
@@ -186,8 +181,7 @@ declaration:
     }
   | CONST_TYPE type IDENTIFIER '=' expr
     { 
-      string name($3);
-      free($3);
+      string name = cleanStr($3);
       shared_ptr<VarID> id (new VarID($2, name, $5->getExpr()));
       declareID(id);
       string repr = $5->repr() + popv(name, id->scope);
@@ -197,8 +191,7 @@ declaration:
   // for enums
   | ENUM_TYPE IDENTIFIER '{' enum_variants '}'
     {
-      string name($2);
-      free($2);
+      string name = cleanStr($2);
       shared_ptr<EnumID> eid(new EnumID(name, $4));
       declareID(eid);
       $$ = new GStmt("");
@@ -206,10 +199,8 @@ declaration:
     }
   | IDENTIFIER IDENTIFIER
     {
-      string eid_name($1);
-      string vid_name($2);
-      free($1);
-      free($2);
+      string eid_name = cleanStr($1);
+      string vid_name = cleanStr($2);
       shared_ptr<EnumID> eid = getID<EnumID>(eid_name);
       shared_ptr<VarID> vid(new VarID(vid_name, eid_name));
       declareID(vid);
@@ -218,10 +209,8 @@ declaration:
     }
   | IDENTIFIER IDENTIFIER '=' expr
     {
-      string eid_name($1);
-      string vid_name($2);
-      free($1);
-      free($2);
+      string eid_name = cleanStr($1);
+      string vid_name = cleanStr($2);
       shared_ptr<EnumID> eid = getID<EnumID>(eid_name);
       shared_ptr<VarID> vid(new VarID(vid_name, eid_name));
       vid->setExpr($4->getExpr());
@@ -235,8 +224,7 @@ declaration:
 expr:
     IDENTIFIER 
     { 
-      string name($1);
-      free($1);
+      string name = cleanStr($1);
       shared_ptr<VarID> id = getID<VarID>(name);
       string repr = pushv(name, id->scope);
       $$ = new ExprStmt(id->getExpr(), repr);
@@ -265,8 +253,7 @@ expr:
     }
   | STRING
     {
-      string name($1);
-      free($1);
+      string name = cleanStr($1);
       shared_ptr<Expr> expr(new Expr(Value(name)));
       string repr = pushs(expr->repr());
       $$ = new ExprStmt(expr, repr);
@@ -278,10 +265,8 @@ expr:
   // enums
   | IDENTIFIER DOUBLE_COLON IDENTIFIER
     {
-      string eid_name($1);
-      string vid_name($3);
-      free($1);
-      free($3);
+      string eid_name = cleanStr($1);
+      string vid_name = cleanStr($3);
       shared_ptr<EnumID> eid = getID<EnumID>(eid_name);
       int variant = eid->getVariant(vid_name);
       shared_ptr<Expr> expr(new EnumExpr(eid->name, variant));  // ??
@@ -401,11 +386,36 @@ expr:
       $$ = estmt;
       exprv.push_back($$);
     }
-
-  // logical operations - TODO: solve the resultant error
-  // | expr AND expr             { $$ = new Expr(Value(*$1&&$3), true); and(); }
-  // | expr OR expr              { $$ = new Expr(Value(*$1||$3), true); or(); }
-  // | NOT expr                  { $$ = new Expr(Value(!(*$2)), true); not(); }
+  | expr AND expr
+    { 
+      bool res = *($1->getExpr())&&$3->getExpr();
+      shared_ptr<Expr> expr(new Expr(Value(res)));
+      ExprStmt *estmt = new ExprStmt(expr);
+      string repr = $1->repr() + $3->repr() + qand();
+      estmt->setRepr(repr);
+      $$ = estmt;
+      exprv.push_back($$);
+    }
+  | expr OR expr
+    { 
+      bool res = *($1->getExpr())||$3->getExpr();
+      shared_ptr<Expr> expr(new Expr(Value(res)));
+      ExprStmt *estmt = new ExprStmt(expr);
+      string repr = $1->repr() + $3->repr() + qor();
+      estmt->setRepr(repr);
+      $$ = estmt;
+      exprv.push_back($$);
+    }
+  | NOT expr
+    { 
+      bool res = (!*($2->getExpr()));
+      shared_ptr<Expr> expr(new Expr(Value(res)));
+      ExprStmt *estmt = new ExprStmt(expr);
+      string repr = $2->repr() + qnot();
+      estmt->setRepr(repr);
+      $$ = estmt;
+      exprv.push_back($$);
+    }
   ;
 
 expr_in_parenthsis:
@@ -413,16 +423,15 @@ expr_in_parenthsis:
   ;
 
 enum_variants:
-    enum_variants ',' IDENTIFIER     { string name($3); free($3); $$ = $1->append(name); }
-  | IDENTIFIER                       { string name($1); free($1); $$ = new StrList(name); }
+    enum_variants ',' IDENTIFIER     { string name = cleanStr($3); $$ = $1->append(name); }
+  | IDENTIFIER                       { string name = cleanStr($1); $$ = new StrList(name); }
   ;
 
 function_declaration:
   type IDENTIFIER { enterFunc($1, $2); } '(' typed_parameter_list ')' 
   code_block 
   { 
-    string name($2);
-    free($2);
+    string name = cleanStr($2);
     exitFunc(name);
     shared_ptr<FuncID> func(new FuncID($1, name, $5));
     declareID(func);
@@ -434,8 +443,7 @@ function_declaration:
 typed_parameter_list:
     typed_parameter_list ',' type IDENTIFIER
     { 
-      string name($4);
-      free($4);
+      string name = cleanStr($4);
       string repr = popv(name, current_scope);
       shared_ptr<VarID> var(new VarID($3, name));
       var->setExpr(shared_ptr<Expr>(new Expr(type2Default[$3])));
@@ -444,8 +452,7 @@ typed_parameter_list:
     }
   | type IDENTIFIER
     { 
-      string name($2);
-      free($2);
+      string name = cleanStr($2);
       string repr = popv(name, current_scope);
       shared_ptr<VarID> var(new VarID($1, name));
       var->setExpr(shared_ptr<Expr>(new Expr(type2Default[$1])));
@@ -458,8 +465,7 @@ typed_parameter_list:
 function_invokation:
     IDENTIFIER '(' argument_list ')' 
     { 
-      string name($1);
-      free($1);
+      string name = cleanStr($1);
       ExprStmt *estmt = new ExprStmt(callingFunc(name, $3));
       estmt->setRepr($3->repr() + funcall(name));
       $$ = estmt;
