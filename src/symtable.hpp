@@ -26,6 +26,12 @@ void exitScope() {
   current_scope--;
 }
 
+void ForceSymbolTableClean() {
+  symbolTable.clear();
+  symbolTable.push_back(Scope());
+  current_scope = 0;
+}
+
 template <typename T>
 concept IDType = std::is_base_of<ID, T>::value;
 

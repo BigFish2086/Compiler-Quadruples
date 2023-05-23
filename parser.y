@@ -12,6 +12,12 @@
 
   extern FILE* yyin;
 
+  string cleanStr(char* s) {
+    string ret(s);
+    free(s);
+    return ret;
+  }
+
   vector<GStmt*> gstmtv;
   vector<ExprStmt*> exprv;
   vector<SwitchStmt*> switchv;
@@ -45,7 +51,7 @@
     typedlistv.clear();
   }
 
-  void abort() {
+  void closeFiles() {
     symlog.close();
     symlog.open(fout + ".log");
     outputFile.close();
@@ -147,84 +153,94 @@ code_block:
 assignment:
   IDENTIFIER '=' expr 
   { 
-    shared_ptr<VarID> id = getID<VarID>($1);
+    string name($1);
+    free($1);
+    shared_ptr<VarID> id = getID<VarID>(name);
     id->setExpr($3->getExpr());
-    string repr = $3->repr() + popv($1, id->scope);
+    string repr = $3->repr() + popv(name, id->scope);
     $$ = new GStmt(repr);
     gstmtv.push_back($$);
-    free($1);
   }
   ;
 
 declaration:
     type IDENTIFIER 
     { 
-      shared_ptr<VarID> id (new VarID($1, $2));
+      string name($2);
+      free($2);
+      shared_ptr<VarID> id (new VarID($1, name));
       declareID(id);
       $$ = new GStmt("");
       gstmtv.push_back($$);
-      free($2);
     }
   | type IDENTIFIER '=' expr 
     { 
-      shared_ptr<VarID> id (new VarID($1, $2));
+      string name($2);
+      free($2);
+      shared_ptr<VarID> id (new VarID($1, name));
       id->setExpr($4->getExpr());
       declareID(id);
-      string repr = $4->repr() + popv($2, id->scope);
+      string repr = $4->repr() + popv(name, id->scope);
       $$ = new GStmt(repr);
       gstmtv.push_back($$);
-      free($2);
     }
   | CONST_TYPE type IDENTIFIER '=' expr
     { 
-      shared_ptr<VarID> id (new VarID($2, $3, $5->getExpr()));
+      string name($3);
+      free($3);
+      shared_ptr<VarID> id (new VarID($2, name, $5->getExpr()));
       declareID(id);
-      string repr = $5->repr() + popv($3, id->scope);
+      string repr = $5->repr() + popv(name, id->scope);
       $$ = new GStmt(repr);
       gstmtv.push_back($$);
-      free($3);
     }
   // for enums
   | ENUM_TYPE IDENTIFIER '{' enum_variants '}'
     {
-      shared_ptr<EnumID> eid(new EnumID($2, $4));
+      string name($2);
+      free($2);
+      shared_ptr<EnumID> eid(new EnumID(name, $4));
       declareID(eid);
       $$ = new GStmt("");
       gstmtv.push_back($$);
-      free($2);
     }
   | IDENTIFIER IDENTIFIER
     {
-      shared_ptr<EnumID> eid = getID<EnumID>($1);
-      shared_ptr<VarID> vid(new VarID($2, eid->name));
+      string eid_name($1);
+      string vid_name($2);
+      free($1);
+      free($2);
+      shared_ptr<EnumID> eid = getID<EnumID>(eid_name);
+      shared_ptr<VarID> vid(new VarID(vid_name, eid_name));
       declareID(vid);
       $$ = new GStmt("");
       gstmtv.push_back($$);
-      free($1);
-      free($2);
     }
   | IDENTIFIER IDENTIFIER '=' expr
     {
-      shared_ptr<EnumID> eid = getID<EnumID>($1);
-      shared_ptr<VarID> vid(new VarID($2, eid->name));
-      vid->setExpr($4->getExpr());
-      declareID(vid);
-      string repr = $4->repr() + popv($2, vid->scope);
-      $$ = new GStmt(repr);
-      gstmtv.push_back($$);
+      string eid_name($1);
+      string vid_name($2);
       free($1);
       free($2);
+      shared_ptr<EnumID> eid = getID<EnumID>(eid_name);
+      shared_ptr<VarID> vid(new VarID(vid_name, eid_name));
+      vid->setExpr($4->getExpr());
+      declareID(vid);
+      string repr = $4->repr() + popv(vid_name, vid->scope);
+      $$ = new GStmt(repr);
+      gstmtv.push_back($$);
     }
   ;
 
 expr:
     IDENTIFIER 
     { 
-      shared_ptr<VarID> id = getID<VarID>($1);
-      string repr = pushv($1, id->scope);
+      string name($1);
+      free($1);
+      shared_ptr<VarID> id = getID<VarID>(name);
+      string repr = pushv(name, id->scope);
       $$ = new ExprStmt(id->getExpr(), repr);
       exprv.push_back($$);
-      free($1);
     }
   | INTEGER 
     { 
@@ -249,11 +265,12 @@ expr:
     }
   | STRING
     {
-      shared_ptr<Expr> expr(new Expr(Value($1)));
+      string name($1);
+      free($1);
+      shared_ptr<Expr> expr(new Expr(Value(name)));
       string repr = pushs(expr->repr());
       $$ = new ExprStmt(expr, repr);
       exprv.push_back($$);
-      free($1);
     }
 
   | expr_in_parenthsis        { $$ = $1; exprv.push_back($$); }
@@ -261,14 +278,16 @@ expr:
   // enums
   | IDENTIFIER DOUBLE_COLON IDENTIFIER
     {
-      shared_ptr<EnumID> eid = getID<EnumID>($1);
-      int variant = eid->getVariant($3);
+      string eid_name($1);
+      string vid_name($3);
+      free($1);
+      free($3);
+      shared_ptr<EnumID> eid = getID<EnumID>(eid_name);
+      int variant = eid->getVariant(vid_name);
       shared_ptr<Expr> expr(new EnumExpr(eid->name, variant));  // ??
       string repr = push(expr->repr());
       $$ = new ExprStmt(expr, repr);
       exprv.push_back($$);
-      free($1);
-      free($3);
     }
 
   // to be able to do something like `print adder(1, 2.2);`
@@ -394,41 +413,44 @@ expr_in_parenthsis:
   ;
 
 enum_variants:
-    enum_variants ',' IDENTIFIER     { $$ = $1->append($3); free($3); }
-  | IDENTIFIER                       { $$ = new StrList($1); free($1); }
+    enum_variants ',' IDENTIFIER     { string name($3); free($3); $$ = $1->append(name); }
+  | IDENTIFIER                       { string name($1); free($1); $$ = new StrList(name); }
   ;
 
 function_declaration:
   type IDENTIFIER { enterFunc($1, $2); } '(' typed_parameter_list ')' 
   code_block 
   { 
-    exitFunc($2); 
-    shared_ptr<FuncID> func(new FuncID($1, $2, $5));
-    declareID(func);
-    $$ = new GStmt(funcdef($2, current_scope) + $5->repr() + $7->repr());
-    gstmtv.push_back($$);
+    string name($2);
     free($2);
+    exitFunc(name);
+    shared_ptr<FuncID> func(new FuncID($1, name, $5));
+    declareID(func);
+    $$ = new GStmt(funcdef(name, current_scope) + $5->repr() + $7->repr());
+    gstmtv.push_back($$);
   }
   ;
 
 typed_parameter_list:
     typed_parameter_list ',' type IDENTIFIER
     { 
-      string repr = popv($4, current_scope);
-      shared_ptr<VarID> var(new VarID($3, $4));
+      string name($4);
+      free($4);
+      string repr = popv(name, current_scope);
+      shared_ptr<VarID> var(new VarID($3, name));
       var->setExpr(shared_ptr<Expr>(new Expr(type2Default[$3])));
       declareID(var);
       $$ = $1->append($3, repr);
-      free($4);
     }
   | type IDENTIFIER
     { 
-      string repr = popv($2, current_scope);
-      shared_ptr<VarID> var(new VarID($1, $2));
+      string name($2);
+      free($2);
+      string repr = popv(name, current_scope);
+      shared_ptr<VarID> var(new VarID($1, name));
       var->setExpr(shared_ptr<Expr>(new Expr(type2Default[$1])));
       declareID(var);
       $$ = new TypedList($1, repr);
-      free($2);
     }
   | %empty { $$ = new TypedList(); }
   ;
@@ -436,10 +458,11 @@ typed_parameter_list:
 function_invokation:
     IDENTIFIER '(' argument_list ')' 
     { 
-      ExprStmt *estmt = new ExprStmt(callingFunc($1, $3));
-      estmt->setRepr($3->repr() + funcall($1));
-      $$ = estmt;
+      string name($1);
       free($1);
+      ExprStmt *estmt = new ExprStmt(callingFunc(name, $3));
+      estmt->setRepr($3->repr() + funcall(name));
+      $$ = estmt;
     }
   ;
 
@@ -542,11 +565,17 @@ int main(int argc, char** argv) {
   symlog.open(fout + ".log");
 
   // Handle syntax errors.
-  if (yyparse()) syntax_error_msg;
-  if (syntax_errors) {
-    cerr << "Found " << syntax_errors <<" syntax error(s)" <<endl;
-    abort();
+  try {
+    if (yyparse()) syntax_error_msg;
+    if (syntax_errors) {
+      cerr << "Found " << syntax_errors <<" syntax error(s)" <<endl;
+    }
+  } catch (const runtime_error &e) {
+    cerr << e.what() << endl;
   }
+  cout << "Parsing complete." << endl;
+  ForceSymbolTableClean();
+  closeFiles();
   cleanup();
 
   return 0;
