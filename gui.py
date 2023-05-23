@@ -132,7 +132,7 @@ def selectFile(event=None):
 window_size = (1080, 720)
 frame_size = (int(window_size[0] * 0.90), int(window_size[1] - 20))
 root = Tk()
-root.title("A3E")
+root.title("Compiler")
 root.configure(background=background)
 root.option_add("*tearOff", False)
 

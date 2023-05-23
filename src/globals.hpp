@@ -53,23 +53,19 @@ map<int, Value> type2Default = {{INTEGER, Value(0)},
                                 {STRING, Value("")},
                                 {ENUM_TYPE, Value(0)}};
 
-// first type OP second type
-map<int, map<int, string>> type2Inst = {
-    {INTEGER,
-     {
-         {FLOAT, "pop tmp\nint2float\npush tmp\n"},
-         {BOOL, "bool2int"},
-     }},
-    {FLOAT,
-     {
-         {INTEGER, "int2float"},
-         {BOOL, "bool2float"},
-     }},
-    {BOOL,
-     {
-         {INTEGER, "pop tmp\nint2bool\npush tmp\n"},
-         {FLOAT, "pop tmp\nfloat2bool\npush tmp\n"},
-     }}};
+// key is pushed first, value.key is pushed second after casting
+map<int, map<int, string>> e2id = {
+    {INTEGER, {{FLOAT, "int2float\n"}, {BOOL, "int2bool\n"}}},
+    {FLOAT, {{INTEGER, "float2int\n"}, {BOOL, "float2bool\n"}}},
+    {BOOL, {{INTEGER, "bool2int\n"}, {FLOAT, "bool2float\n"}}}};
+
+
+// key is pushed first, value.key is pushed second then cast value.key to key
+map<int, map<int, string>> e2e = {
+  {INTEGER, {{FLOAT, "pop tmp\nint2float\npush tmp\n"}, {BOOL, "bool2int\n"}}},
+  {FLOAT,  {{INTEGER, "int2float\n"}, {BOOL, "bool2float\n"}}},
+  {BOOL,  {{INTEGER, "pop tmp\nbool2int\npush tmp\n"}, {FLOAT, "pop tmp\nbool2float\npush tmp\n"}}}
+};
 
 // map type two its precedence (bigger number means higher pressedence)
 map<int, int> type2Pre = {{INTEGER, 1}, {FLOAT, 2}, {BOOL, 3}};
@@ -86,35 +82,42 @@ bool canCast(const int &from, const int &to) {
   return it2 != it->second.end();
 }
 
-// id = expr, so expr must be casted to id's type
-string e2idCast(const int &from, const int &to) {
-  if (from == to) {
+// means expression is pushed first and then id later
+string e2idCast(const int &etype, const int &idtype) {
+  if (etype == idtype) {
     return "";
   }
-  if (!canCast(from, to)) {
-    error("Cannot cast from " + type2Str[from] + " to " + type2Str[to]);
+  if (!canCast(etype, idtype)) {
+    error("Cannot cast from " + type2Str[etype] + " to " + type2Str[idtype]);
   }
-  auto it = type2Inst.find(from);
-  if (it == type2Inst.end()) {
+  auto it = e2id.find(etype);
+  if (it == e2id.end()) {
     return "";
   }
-  auto it2 = it->second.find(to);
+  auto it2 = it->second.find(idtype);
   if (it2 == it->second.end()) {
     return "";
   }
   return it2->second;
-};
+}
 
 // expr OP expr, so cast should be done from smaller type to bigger
-string e2eCast(const int &left, const int &right) {
-  if (left == right) {
+string e2eCast(const int &first, const int &second) {
+  if (first == second) {
     return "";
   }
-  if (type2Pre[left] > type2Pre[right]) {
-    return e2idCast(right, left);
-  } else {
-    return e2idCast(left, right);
+  if (!canCast(first, second)) {
+    error("Cannot cast from " + type2Str[first] + " to " + type2Str[second]);
   }
+  auto it = e2e.find(first);
+  if (it == e2e.end()) {
+    return "";
+  }
+  auto it2 = it->second.find(second);
+  if (it2 == it->second.end()) {
+    return "";
+  }
+  return it2->second;
 }
 
 string buildLable(int scp, int cnt) {

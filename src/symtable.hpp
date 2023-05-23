@@ -138,7 +138,7 @@ void exitFunc(const string &funcName) {
   // TODO: print the needed quads to simulate the return type
 }
 
-shared_ptr<Expr> callingFunc(const string &name, shared_ptr<TypedList> paramsTypes) {
+shared_ptr<Expr> callingFunc(const string &name, const TypedList *paramsTypes) {
   shared_ptr<FuncID> funcID = getID<FuncID>(name);
   if (funcID->funcParamsTypes->size() != paramsTypes->size()) {
     error("function " + name + " called with wrong number of arguments");
@@ -153,13 +153,13 @@ shared_ptr<Expr> callingFunc(const string &name, shared_ptr<TypedList> paramsTyp
   return shared_ptr<Expr>(new Expr(type2Default[funcID->type]));
 }
 
-string callingFuncTypeConv(const string &name, shared_ptr<TypedList> paramsTypes) {
+string callingFuncTypeConv(const string &name, const TypedList *paramsTypes) {
   shared_ptr<FuncID> funcID = getID<FuncID>(name);
   string ret = "";
-  for (int i = funcID->funcParamsTypes->size() - 1; i >= 0; i--) {
+  for (int i = 0; i < (int)funcID->funcParamsTypes->size(); i++) {
     yytokentype to = funcID->funcParamsTypes->list[i];
     yytokentype from = paramsTypes->list[i];
-    ret += e2idCast(from, to);
+    ret += e2idCast(to, from);
   }
   return ret;
 }

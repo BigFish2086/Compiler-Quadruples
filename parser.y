@@ -492,9 +492,8 @@ function_invokation:
     IDENTIFIER '(' argument_list ')' 
     { 
       string name = cleanStr($1);
-      shared_ptr<TypedList> args($3);
-      ExprStmt *estmt = new ExprStmt(callingFunc(name, args));
-      string conv = callingFuncTypeConv(name, args);
+      ExprStmt *estmt = new ExprStmt(callingFunc(name, $3));
+      string conv = callingFuncTypeConv(name, $3);
       estmt->setRepr($3->repr() + conv + funcall(name));
       $$ = estmt;
     }
