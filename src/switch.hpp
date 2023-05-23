@@ -96,7 +96,7 @@ struct SwitchStmt {
       if(caseStmt->expr == nullptr) {
         continue;
       }
-      if (!canCast(this->type, caseStmt->type)) {
+      if (this->type != caseStmt->type) {
         error("switch at L# " + to_string(this->line) + " type mismatch in case at L# " + to_string(caseStmt->line));
       }
     }

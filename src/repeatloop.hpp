@@ -8,6 +8,7 @@ struct RepeatStmt {
   shared_ptr<Expr> expr;
   string condition_body;
   string code_block_body;
+  string conv;
 
   RepeatStmt(
     const string &_condition_body,
@@ -31,6 +32,7 @@ struct RepeatStmt {
       string cond = std::get<bool>(_expr->value) ? "true" : "false";
       warning("repeat loop at L# " + to_string(this->line) + " condition is always " + cond);
     }
+    this->conv = e2eCast(_expr->type(), yytokentype::BOOL);
   }
 
   string repr() {
@@ -42,6 +44,7 @@ struct RepeatStmt {
     res += label(initLabel);
     res += this->code_block_body;
     res += this->condition_body;
+    res += this->conv;
     res += jnz(initLabel);
 
     scopeLabels[this->scope] += 3;

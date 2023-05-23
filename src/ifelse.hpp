@@ -9,6 +9,7 @@ struct IFPart {
   yytokentype type;
   string condition_body;
   string code_block_body;
+  string conv;
 
   IFPart(
     shared_ptr<Expr> _expr,
@@ -44,6 +45,7 @@ struct IFPart {
       string cond = std::get<bool>(_expr->value) ? "true" : "false";
       warning("if at L# " + to_string(this->line) + " condition is always " + cond);
     }
+    this->conv = e2eCast(_expr->type(), yytokentype::BOOL);
   }
 
   string repr(const string &curLabel, const string &nextLabel,
@@ -52,6 +54,7 @@ struct IFPart {
     res += label(curLabel);
     if (expr != nullptr) {
       res += this->condition_body;
+      res += this->conv;
       res += jz(nextLabel);
     }
     res += this->code_block_body;

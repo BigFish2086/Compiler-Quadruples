@@ -16,14 +16,19 @@ compile:
 	
 clean: 
 	@echo -e [*] Cleaning up
-	rm -f *.tab.c *.tab.h *.yy.c *.output compiler *.q *.log
+	rm -f *.tab.c *.tab.h *.yy.c ./bin/compiler
+	@echo -e "\n"
+
+mv:
+	@echo -e [*] Moving files
+	mv ./compiler ./bin/
 	@echo -e "\n"
 
 run:
 	@echo -e [*] Running the compiler
-	./compiler
+	./bin/compiler
 	@echo -e "\n"
 
-build: clean bison flex compile
+build: clean bison flex compile mv
 
-all: clean bison flex compile run
+all: clean bison flex compile mv run

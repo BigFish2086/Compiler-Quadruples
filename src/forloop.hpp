@@ -10,6 +10,7 @@ struct ForStmt {
   string condition_body;
   string optional_increment_body;
   string code_block_body;
+  string conv;
 
   ForStmt(const string &_optioanl_assign_body, const string &_condition_body,
           const string &_optional_increment_body,
@@ -37,6 +38,7 @@ struct ForStmt {
       string cond = std::get<bool>(_expr->value) ? "true" : "false";
       warning("for at L# " + to_string(this->line) + " condition is always " + cond);
     }
+    this->conv = e2eCast(_expr->type(), yytokentype::BOOL);
   }
 
   string repr() {
@@ -49,6 +51,7 @@ struct ForStmt {
     res += this->optioanl_assign_body;
     res += label(initLabel);
     res += this->condition_body;
+    res += this->conv;
     res += jz(retLabel);
     res += this->code_block_body;
     res += this->optional_increment_body;

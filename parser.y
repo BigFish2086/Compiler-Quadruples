@@ -54,6 +54,14 @@
     repeatv.clear();
   }
 
+
+  void clearFiles() {
+    symlog.close();
+    symlog.open("./files/symboltable.log");
+    outputFile.close();
+    outputFile.open("./files/quads.out");
+  }
+
   void closeFiles() {
     symlog.close();
     outputFile.close();
@@ -159,7 +167,8 @@ assignment:
     string name = cleanStr($1);
     shared_ptr<VarID> id = getID<VarID>(name);
     id->setExpr($3->getExpr());
-    string repr = $3->repr() + popv(name, id->scope);
+    string conv = e2idCast($3->type(), id->type);
+    string repr = $3->repr() + conv + popv(name, id->scope);
     $$ = new GStmt(repr);
     gstmtv.push_back($$);
   }
@@ -180,7 +189,8 @@ declaration:
       shared_ptr<VarID> id (new VarID($1, name));
       id->setExpr($4->getExpr());
       declareID(id);
-      string repr = $4->repr() + popv(name, id->scope);
+      string conv = e2idCast($4->type(), id->type);
+      string repr = $4->repr() + conv + popv(name, id->scope);
       $$ = new GStmt(repr);
       gstmtv.push_back($$);
     }
@@ -189,7 +199,8 @@ declaration:
       string name = cleanStr($3);
       shared_ptr<VarID> id (new VarID($2, name, $5->getExpr()));
       declareID(id);
-      string repr = $5->repr() + popv(name, id->scope);
+      string conv = e2idCast($5->type(), id->type);
+      string repr = $5->repr() + conv + popv(name, id->scope);
       $$ = new GStmt(repr);
       gstmtv.push_back($$);
     }
@@ -297,7 +308,8 @@ expr:
     {
       shared_ptr<Expr> expr(*($1->getExpr())+$3->getExpr());
       ExprStmt *estmt = new ExprStmt(expr);
-      string repr = $1->repr() + $3->repr() + add();
+      string conv = e2eCast($1->type(), $3->type());
+      string repr = $1->repr() + $3->repr() + conv + add();
       estmt->setRepr(repr);
       $$ = estmt;
       exprv.push_back($$);
@@ -306,7 +318,8 @@ expr:
     {
       shared_ptr<Expr> expr(*($1->getExpr())-$3->getExpr());
       ExprStmt *estmt = new ExprStmt(expr);
-      string repr = $1->repr() + $3->repr() + sub();
+      string conv = e2eCast($1->type(), $3->type());
+      string repr = $1->repr() + $3->repr() + conv + sub();
       estmt->setRepr(repr);
       $$ = estmt;
       exprv.push_back($$);
@@ -315,7 +328,8 @@ expr:
     {
       shared_ptr<Expr> expr(*($1->getExpr())*$3->getExpr());
       ExprStmt *estmt = new ExprStmt(expr);
-      string repr = $1->repr() + $3->repr() + mult();
+      string conv = e2eCast($1->type(), $3->type());
+      string repr = $1->repr() + $3->repr() + conv + mult();
       estmt->setRepr(repr);
       $$ = estmt;
       exprv.push_back($$);
@@ -324,7 +338,8 @@ expr:
     {
       shared_ptr<Expr> expr(*($1->getExpr())/$3->getExpr());
       ExprStmt *estmt = new ExprStmt(expr);
-      string repr = $1->repr() + $3->repr() + div();
+      string conv = e2eCast($1->type(), $3->type());
+      string repr = $1->repr() + $3->repr() + conv + div();
       estmt->setRepr(repr);
       $$ = estmt;
       exprv.push_back($$);
@@ -336,7 +351,8 @@ expr:
       bool res = *($1->getExpr())<$3->getExpr();
       shared_ptr<Expr> expr(new Expr(Value(res)));
       ExprStmt *estmt = new ExprStmt(expr);
-      string repr = $1->repr() + $3->repr() + lt();
+      string conv = e2eCast($1->type(), $3->type());
+      string repr = $1->repr() + $3->repr() + conv + lt();
       estmt->setRepr(repr);
       $$ = estmt;
       exprv.push_back($$);
@@ -346,7 +362,8 @@ expr:
       bool res = *($1->getExpr())>$3->getExpr();
       shared_ptr<Expr> expr(new Expr(Value(res)));
       ExprStmt *estmt = new ExprStmt(expr);
-      string repr = $1->repr() + $3->repr() + gt();
+      string conv = e2eCast($1->type(), $3->type());
+      string repr = $1->repr() + $3->repr() + conv + gt();
       estmt->setRepr(repr);
       $$ = estmt;
       exprv.push_back($$);
@@ -356,7 +373,8 @@ expr:
       bool res = *($1->getExpr())<=$3->getExpr();
       shared_ptr<Expr> expr(new Expr(Value(res)));
       ExprStmt *estmt = new ExprStmt(expr);
-      string repr = $1->repr() + $3->repr() + le();
+      string conv = e2eCast($1->type(), $3->type());
+      string repr = $1->repr() + $3->repr() + conv + le();
       estmt->setRepr(repr);
       $$ = estmt;
       exprv.push_back($$);
@@ -366,7 +384,8 @@ expr:
       bool res = *($1->getExpr())>=$3->getExpr();
       shared_ptr<Expr> expr(new Expr(Value(res)));
       ExprStmt *estmt = new ExprStmt(expr);
-      string repr = $1->repr() + $3->repr() + ge();
+      string conv = e2eCast($1->type(), $3->type());
+      string repr = $1->repr() + $3->repr() + conv + ge();
       estmt->setRepr(repr);
       $$ = estmt;
       exprv.push_back($$);
@@ -376,7 +395,8 @@ expr:
       bool res = *($1->getExpr())==$3->getExpr();
       shared_ptr<Expr> expr(new Expr(Value(res)));
       ExprStmt *estmt = new ExprStmt(expr);
-      string repr = $1->repr() + $3->repr() + eq();
+      string conv = e2eCast($1->type(), $3->type());
+      string repr = $1->repr() + $3->repr() + conv + eq();
       estmt->setRepr(repr);
       $$ = estmt;
       exprv.push_back($$);
@@ -386,12 +406,13 @@ expr:
       bool res = *($1->getExpr())!=$3->getExpr();
       shared_ptr<Expr> expr(new Expr(Value(res)));
       ExprStmt *estmt = new ExprStmt(expr);
-      string repr = $1->repr() + $3->repr() + ne();
+      string conv = e2eCast($1->type(), $3->type());
+      string repr = $1->repr() + $3->repr() + conv + ne();
       estmt->setRepr(repr);
       $$ = estmt;
       exprv.push_back($$);
     }
-  | expr AND expr
+  | expr AND expr // bool & bool are only allowed for logical, no convert
     { 
       bool res = *($1->getExpr())&&$3->getExpr();
       shared_ptr<Expr> expr(new Expr(Value(res)));
@@ -471,8 +492,10 @@ function_invokation:
     IDENTIFIER '(' argument_list ')' 
     { 
       string name = cleanStr($1);
-      ExprStmt *estmt = new ExprStmt(callingFunc(name, $3));
-      estmt->setRepr($3->repr() + funcall(name));
+      shared_ptr<TypedList> args($3);
+      ExprStmt *estmt = new ExprStmt(callingFunc(name, args));
+      string conv = callingFuncTypeConv(name, args);
+      estmt->setRepr($3->repr() + conv + funcall(name));
       $$ = estmt;
     }
   ;
@@ -579,18 +602,20 @@ int main(int argc, char** argv) {
    #endif
 
   fout = argv[1];
-  outputFile.open(fout + ".q");
+  outputFile.open("./files/quads.out");
   outputFile << fixed << setprecision(5);
-  symlog.open(fout + ".log");
+  symlog.open("./files/symboltable.log");
 
   // Handle syntax errors.
   try {
     if (yyparse()) syntax_error_msg;
     if (syntax_errors) {
       cerr << "Found " << syntax_errors <<" syntax error(s)" <<endl;
+      clearFiles();
     }
   } catch (const runtime_error &e) {
     cerr << e.what() << endl;
+    clearFiles();
   }
   cout << "Parsing complete." << endl;
   ForceSymbolTableClean();

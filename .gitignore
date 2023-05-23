@@ -9,5 +9,8 @@ er
 test
 *.log
 *.q
+x.py
+code.cpp
+files
 
 compiler

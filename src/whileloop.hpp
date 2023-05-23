@@ -8,6 +8,7 @@ struct WhileStmt {
   shared_ptr<Expr> expr;
   string condition_body;
   string code_block_body;
+  string conv;
 
   WhileStmt(
     const string &_condition_body,
@@ -32,6 +33,7 @@ struct WhileStmt {
       string cond = std::get<bool>(_expr->value) ? "true" : "false";
       warning("while at L# " + to_string(this->line) + " condition is always " + cond);
     }
+    this->conv = e2eCast(_expr->type(), yytokentype::BOOL);
   }
 
   string repr() {
@@ -43,6 +45,7 @@ struct WhileStmt {
 
     res += label(initLabel);
     res += this->condition_body;
+    res += this->conv;
     res += jz(retLabel);
     res += this->code_block_body;
     res += jmp(initLabel);
