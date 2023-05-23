@@ -6,4 +6,5 @@
 #include "./src/switch.hpp"
 #include "./src/symtable.hpp"
 #include "./src/whileloop.hpp"
+#include "./src/repeatloop.hpp"
 #include "./quads.hpp"

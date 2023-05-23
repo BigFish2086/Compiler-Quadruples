@@ -11,10 +11,10 @@ struct CaseStmt {
 
   // CASE
   CaseStmt(shared_ptr<Expr> _expr, const string &_body) {
-    this->expr = _expr;
-    this->type = _expr->type();
     this->scope = current_scope;
     this->line = yylineno;
+    this->expr = _expr;
+    this->type = _expr->type();
     this->body = _body;
   }
 
@@ -72,10 +72,10 @@ struct SwitchStmt {
   CaseStmtList *caseStmtList = nullptr;
 
   SwitchStmt(shared_ptr<Expr> _expr, CaseStmtList *_caseStmtList) {
-    this->expr = _expr;
-    this->type = _expr->type();
     this->scope = current_scope;
     this->line = yylineno;
+    this->expr = _expr;
+    this->type = _expr->type();
     this->check(_caseStmtList);
     this->caseStmtList = _caseStmtList;
     int iret = scopeLabels[this->scope] + _caseStmtList->size() + 1;
@@ -90,14 +90,14 @@ struct SwitchStmt {
   void check(CaseStmtList *_caseStmtList) {
     this->caseStmtList = _caseStmtList;
     if (_caseStmtList->list.size() == 0) {
-      error("switch case without any case");
+      error("switch at L# " + to_string(this->line) + " without any case");
     }
     for (auto caseStmt : _caseStmtList->list) {
       if(caseStmt->expr == nullptr) {
         continue;
       }
       if (!canCast(this->type, caseStmt->type)) {
-        error("switch case type mismatch");
+        error("switch at L# " + to_string(this->line) + " type mismatch in case at L# " + to_string(caseStmt->line));
       }
     }
   }

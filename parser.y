@@ -25,6 +25,7 @@
   vector<WhileStmt*> whilev;
   vector<IFStmt*> ifv;
   vector<TypedList*> typedlistv;
+  vector<RepeatStmt*> repeatv;
 
   template <typename T>
   struct vdel {
@@ -41,6 +42,7 @@
     for_each(all(whilev), vdel<WhileStmt>());
     for_each(all(ifv), vdel<IFStmt>());
     for_each(all(typedlistv), vdel<TypedList>());
+    for_each(all(repeatv), vdel<RepeatStmt>());
 
     gstmtv.clear();
     exprv.clear();
@@ -49,6 +51,7 @@
     whilev.clear();
     ifv.clear();
     typedlistv.clear();
+    repeatv.clear();
   }
 
   void closeFiles() {
@@ -78,13 +81,14 @@
 
 %type <struct WhileStmt*> while_stmt
 %type <struct ForStmt*> for_stmt
+%type <struct RepeatStmt*> repeat_until_stmt
 
 %type <struct CaseStmt*> switch_case_branch optional_switch_default_branch
 %type <struct CaseStmtList*> switch_branches
 %type <struct SwitchStmt*> switch_stmt
 
 %token ERROR PRINT RETURN DOUBLE_COLON
-%token WHILE FOR
+%token WHILE FOR REPEAT UNTIL
 %token IF ELSE SWITCH CASE DEFAULT
 %token INT_TYPE FLOAT_TYPE BOOL_TYPE STRING_TYPE ENUM_TYPE CONST_TYPE
 
@@ -131,6 +135,7 @@ stmt:
   | if_stmt { $$ = new GStmt($1->repr()); gstmtv.push_back($$); }
   | while_stmt { $$ = new GStmt($1->repr()); gstmtv.push_back($$); }
   | for_stmt { $$ = new GStmt($1->repr()); gstmtv.push_back($$); }
+  | repeat_until_stmt ';' { $$ = new GStmt($1->repr()); gstmtv.push_back($$); }
   | switch_stmt { $$ = new GStmt($1->repr()); gstmtv.push_back($$); }
   | ERROR { syntax_error_msg; }
   | ';' { $$ = new GStmt(""); gstmtv.push_back($$); }
@@ -519,6 +524,14 @@ for_stmt:
       $$ = new ForStmt(b4, b6, b8, $10->repr(), $6->getExpr());
       exitScope();
       forv.push_back($$);
+    }
+  ;
+
+repeat_until_stmt:
+  REPEAT code_block UNTIL expr_in_parenthsis 
+    { 
+      $$ = new RepeatStmt($4->repr(), $2->repr(), $4->getExpr());
+      repeatv.push_back($$);
     }
   ;
 

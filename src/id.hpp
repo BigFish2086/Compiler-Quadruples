@@ -12,10 +12,10 @@ public:
   yytokentype type;
 
   ID(yytokentype _type, const string &_name) {
-    this->type = _type;
-    this->name = _name;
     this->line = yylineno;
     this->scope = current_scope;
+    this->type = _type;
+    this->name = _name;
     this->isUsed = false;
   }
   virtual ~ID() {}
@@ -59,6 +59,7 @@ public:
       : ID(_type, _name) {
     this->__setExpr(_expr);
     this->isConst = true;
+    // this->expr->isConst = true;
   }
 
   // for enum variants
@@ -74,6 +75,7 @@ public:
     this->enumName = _enumName;
     this->__setExpr(_expr);
     this->isConst = true;
+    // this->expr->isConst = true;
   }
 
   ~VarID() {}
@@ -116,6 +118,7 @@ public:
       error("cannot assign to const variable " + this->name);
     }
     this->__setExpr(_expr);
+    // this->expr->isConst = this->isConst;
   }
 
   shared_ptr<Expr> getExpr() {

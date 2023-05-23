@@ -58,5 +58,6 @@ string qnot() { return "not\n"; }
 
 string jmp(const string &label) { return "jmp " + label + "\n"; }
 string jz(const string &label) { return "jz " + label + "\n"; }
+string jnz(const string &label) { return "jnz " + label + "\n"; }
 
 string label(const string &label) { return "label" + label + ":\n"; }

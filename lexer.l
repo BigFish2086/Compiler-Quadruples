@@ -23,6 +23,8 @@
 
 "while"       return WHILE;
 "for"         return FOR;
+"repeat"      return REPEAT;
+"until"       return UNTIL;
 
 "print"       return PRINT;
 "return"      return RETURN;

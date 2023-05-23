@@ -15,11 +15,11 @@ struct IFPart {
     const string &_condition_body,
     const string &_code_block_body
   ) {
+    this->scope = current_scope;
+    this->line = yylineno;
     this->check(_expr);
     this->expr = _expr;
     this->type = _expr->type();
-    this->scope = current_scope;
-    this->line = yylineno;
     this->condition_body = _condition_body;
     this->code_block_body = _code_block_body;
   }
@@ -38,11 +38,11 @@ struct IFPart {
 
   void check(shared_ptr<Expr> _expr) {
     if (!canCast(_expr->type(), yytokentype::BOOL)) {
-      error("if condition must be of type convertable to boolean");
+      error("if at L# " + to_string(this->line) + " condition must be of type convertable to boolean");
     }
     if (_expr->type() == yytokentype::BOOL) {
       string cond = std::get<bool>(_expr->value) ? "true" : "false";
-      warning("if condition is always " + cond);
+      warning("if at L# " + to_string(this->line) + " condition is always " + cond);
     }
   }
 

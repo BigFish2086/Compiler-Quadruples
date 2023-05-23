@@ -15,6 +15,9 @@ struct ForStmt {
           const string &_optional_increment_body,
           const string &_code_block_body, shared_ptr<Expr> _expr) {
 
+    this->scope = current_scope;
+    this->line = yylineno;
+
     this->check(_expr);
     this->expr = _expr;
 
@@ -22,20 +25,17 @@ struct ForStmt {
     this->condition_body = _condition_body;
     this->optional_increment_body = _optional_increment_body;
     this->code_block_body = _code_block_body;
-
-    this->scope = current_scope;
-    this->line = yylineno;
   }
 
   ~ForStmt() {}
 
   void check(shared_ptr<Expr> _expr) {
     if (!canCast(_expr->type(), yytokentype::BOOL)) {
-      error("for condition must be of type convertable to boolean");
+      error("for at L# " + to_string(this->line) + " condition must be of type convertable to boolean");
     }
     if (_expr->type() == yytokentype::BOOL) {
       string cond = std::get<bool>(_expr->value) ? "true" : "false";
-      warning("for condition is always " + cond);
+      warning("for at L# " + to_string(this->line) + " condition is always " + cond);
     }
   }
 
