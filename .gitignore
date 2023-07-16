@@ -1,0 +1,17 @@
+team_members.txt
+
+lex.yy.c
+
+*.tab.h
+*.tab.c
+
+er
+test
+*.log
+*.q
+x.py
+code.cpp
+files
+bin
+
+compiler
