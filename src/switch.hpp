@@ -69,9 +69,10 @@ struct SwitchStmt {
   int scope, line;
   yytokentype type;
   string returnLabel;
+  string condition_body;
   CaseStmtList *caseStmtList = nullptr;
 
-  SwitchStmt(shared_ptr<Expr> _expr, CaseStmtList *_caseStmtList) {
+  SwitchStmt(shared_ptr<Expr> _expr, const string &condition_body, CaseStmtList *_caseStmtList) {
     this->scope = current_scope;
     this->line = yylineno;
     this->expr = _expr;
@@ -79,6 +80,7 @@ struct SwitchStmt {
     this->check(_caseStmtList);
     this->caseStmtList = _caseStmtList;
     int iret = scopeLabels[this->scope] + _caseStmtList->size() + 1;
+    this->condition_body = condition_body;
     this->returnLabel = buildLable(this->scope, iret);
   }
 
@@ -104,6 +106,7 @@ struct SwitchStmt {
 
   string repr() {
     string res = "";
+    res += this->condition_body;
     int &caseLabelsCounter = scopeLabels[this->scope];
     for (auto caseStmt : caseStmtList->list) {
       string curLabel = buildLable(this->scope, caseLabelsCounter++);

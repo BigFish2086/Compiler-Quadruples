@@ -571,8 +571,8 @@ switch_stmt:
     // default branch is optional
     SWITCH expr_in_parenthsis '{' switch_branches optional_switch_default_branch '}'
     {
-      if($5 == NULL) $$ = new SwitchStmt($2->getExpr(), $4);
-      else $$ = new SwitchStmt($2->getExpr(), $4->append($5));
+      if($5 == NULL) $$ = new SwitchStmt($2->getExpr(), $2->repr(), $4);
+      else $$ = new SwitchStmt($2->getExpr(), $2->repr(), $4->append($5));
       switchv.push_back($$);
     }
   ;
