@@ -46,6 +46,7 @@ consoleText = ""
 
 isCompiled = False
 compilerPath = "./bin/compiler"
+executorPath = "./exec.py"
 filesdir = "./files/"
 codeFile = filesdir + "code.in"
 quadFile = filesdir + "quads.out"
@@ -116,6 +117,22 @@ def compile(event=None):
         compile()
         isCompiled = False
 
+def execute(event=None):
+    global quadFile, consoleText, executorPath
+    res = ""
+    if path.isfile(executorPath):
+        proc = Popen(["python3", executorPath, quadFile], stdout=PIPE, stderr=PIPE)
+        output, error = proc.communicate()
+        res = output.decode("utf-8") + "\n\n" + error.decode("utf-8")
+    else:
+        res = "Executor not found\n\n"
+    consoleText = "" if not isCompiled else consoleText
+    consoleText += "[*] Run:\n" + res
+    console.config(state=NORMAL)
+    console.delete('1.0', END)
+    console.insert('1.0', consoleText)
+    console.config(state=DISABLED)
+
 def selectFile(event=None):
     file_name = askopenfilename(initialdir=".", title="Select file", filetypes=(("all files", "*.*"), ("text files", "*.txt")))
     if not file_name:
@@ -168,6 +185,7 @@ editArea.insert('1.0',
 """)
 editArea.bind('<KeyRelease>', changes)
 editArea.bind('<Control-c>', compile)
+editArea.bind('<Control-r>', execute)
 editArea.bind('<Control-i>', selectFile)
 
 # ====================================================================================================

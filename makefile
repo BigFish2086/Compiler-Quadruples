@@ -10,8 +10,8 @@ flex:
 
 compile:
 	@echo -e [*] Compiling the compiler
-	# g++ -g -std=c++20 parser.tab.c lex.yy.c -o compiler 
-	g++ -DDEBUG -DLOCAL -std=c++20 -Wshadow -Wall -Wno-unused-result -g -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG parser.tab.c lex.yy.c -o compiler
+	g++ -g -std=c++20 parser.tab.c lex.yy.c -o compiler 
+	# g++ -DDEBUG -DLOCAL -std=c++20 -Wshadow -Wall -Wno-unused-result -g -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG parser.tab.c lex.yy.c -o compiler
 	@echo -e "\n"
 	
 clean: 
